@@ -1,18 +1,19 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-import numpy as np
-import datetime
-import time
 import os
 from os import path, chdir
 from subprocess import call
+import time
+import numpy as np
+import datetime
 import pandas as pd
 import sys
 # from arlhysplit.process import is_process_running
 # from arlhysplit.process import ProcessList
-from monet.util import svhy
-from monet.util.svhy import create_runlist
-from monet.util.svhy import RunScript
-from monet.util.svhy import DatemScript
+import svhy
+from svhy import create_runlist
+#from monet.util.svhy import create_controls
+#from monet.util.svhy import RunScript
+#from monet.util.svhy import DatemScript
 
 
 # The ensembles are generally handled by creating their own subdirectory named
@@ -68,8 +69,8 @@ def create_ensemble_datem_scripts(options, d1, d2, source_chunks):
     for edir in dirnamelist:
         print('TDIR', options.tdir)
         tdir = path.join(options.tdir, edir)
-        runlist = create_runlist(tdir, options.hdir, d1, d2, source_chunks)
-        rs = DatemScript("p1datem_" + options.tag + memberlist[iii] + '.sh', 
+        runlist = svhy.create_runlist(tdir, options.hdir, d1, d2, source_chunks)
+        rs = svhy.DatemScript("p1datem_" + options.tag + memberlist[iii] + '.sh', 
                        runlist,
                        tdir,
                        options.cunits, 
@@ -86,8 +87,8 @@ def create_ensemble_scripts(options, d1, d2, source_chunks, check):
     for edir in dirnamelist:
         print('TDIR', options.tdir)
         tdir = path.join(options.tdir, edir)
-        runlist = create_runlist(tdir, options.hdir, d1, d2, source_chunks)
-        rs = RunScript(options.tag + memberlist[iii] + '.sh', runlist,
+        runlist = svhy.create_runlist(tdir, options.hdir, d1, d2, source_chunks)
+        rs = svhy.RunScript(options.tag + memberlist[iii] + '.sh', runlist,
                        tdir,
                        check)
         iii+=1

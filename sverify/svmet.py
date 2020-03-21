@@ -3,19 +3,19 @@ import numpy as np
 import matplotlib
 #matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
+import matplotlib.colors as colors
 import datetime
 #import sys
 import seaborn as sns
 import warnings
-from monet.utilhysplit import statmain
 import pylab as pl
 # from arlhysplit.models.datem import mk_datem_pkl
 #from monet.obs.epa_util import convert_epa_unit
+from monet.utilhysplit import statmain
 from monet.util import tools
-from monet.util import ptools
-from monet.util.svan1 import geometry2hash
-from matplotlib.ticker import MultipleLocator
-import matplotlib.colors as colors
+import ptools
+from svan1 import geometry2hash
 
 
 """

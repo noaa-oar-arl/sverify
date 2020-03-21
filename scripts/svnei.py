@@ -1,17 +1,9 @@
 from optparse import OptionParser
-import datetime
-import seaborn as sns
-import matplotlib.pyplot as plt
-import os
-from monet.utilhysplit.hcontrol import NameList
-from monet.util import options_process
-from monet.util import options_vmix
-from monet.util import options_obs  
-from monet.util import svconfig
-from monet.util.svmet import MetObs
 import sys
-import pandas as pd
-import numpy as np
+#import pandas as pd
+#import numpy as np
+from sverify import options_process
+from sverify import svconfig
 
 # import cartopy.crs as ccrs
 # import cartopy.feature as cfeature

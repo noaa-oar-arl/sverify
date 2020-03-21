@@ -15,10 +15,9 @@ import pandas as pd
 import warnings
 
 # SO2 modules
-from monet.util.svdir import date2dir
+from svdir import date2dir
 
 # MONETIO MODULES
-from monet.util.svdir import date2dir
 from monetio.obs import cems_api
 from monetio.obs import cems_mod
 import monetio.obs.obs_util as obs_util

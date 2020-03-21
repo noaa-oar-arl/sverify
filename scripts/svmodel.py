@@ -5,13 +5,13 @@ import sys
 #import numpy as np
 #import matplotlib.pyplot as plt
 #import os
-from monet.util import options_process
-from monet.util import svconfig
-from monet.util.svhy import VmixScript
-from monet.util.svhy import DatemScript
-from monet.util.svhy import RunScript
-from monet.util.svhy import create_nei_runlist
-from monet.util.svhy import create_runlist
+from sverify import options_process
+from sverify import svconfig
+from sverify.svhy import VmixScript
+from sverify.svhy import DatemScript
+from sverify.svhy import RunScript
+from sverify.svhy import create_nei_runlist
+from sverify.svhy import create_runlist
 
 # import cartopy.crs as ccrs
 # import cartopy.feature as cfeature

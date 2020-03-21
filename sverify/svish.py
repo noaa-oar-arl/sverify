@@ -13,13 +13,9 @@ from monet.obs import ish
 import matplotlib.pyplot as plt
 import seaborn as sns
 #from monet import MONET
-from monet.util.svobs import find_obs_files
+from svobs import find_obs_files
 
 """
-verify NWP met data with met station measurements.
-
-INPUTS: Dates to run
-        Areas to look at
 
 """
 

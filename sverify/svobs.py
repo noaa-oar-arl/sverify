@@ -20,7 +20,7 @@ import monetio.obs.obs_util as obs_util
 from monet.utilhysplit import statmain
 
 #MONET MODULES THAT should be SO2 modules
-from monet.util.svdir import date2dir
+from svdir import date2dir
 
 """
 FUNCTIONS

@@ -2,9 +2,6 @@
 from os import path, chdir
 import datetime
 from subprocess import call
-#import numpy as np
-#import time
-#import os
 
 """
 NAME: ashfall_base.py
