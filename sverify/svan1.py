@@ -12,13 +12,7 @@ import seaborn as sns
 from shapely.geometry import Point
 from shapely.geometry import LineString
 import geopandas as gpd
-
-from svcems import SourceSummary
-from svcems import df2hash
-#from monet.util.svcems import CEMScsv
-from svobs import SObs
-import svobs as svo
-from  nei import NeiSummary
+import sverify as sv
 
 """
 Functions and classes in this module investiage the relationship
@@ -125,7 +119,7 @@ class CemsObs(object):
         dt1 = datetime.datetime.strptime(str1[0], "obs%Y%m%d") 
         dt2 = datetime.datetime.strptime(str1[1], "%Y%m%d") 
         area=''
-        obs = SObs([dt1, dt2], area)
+        obs = sv.svobs.SObs([dt1, dt2], area)
         self.obs = obs
 
 
@@ -140,16 +134,16 @@ class CemsObs(object):
         sourcesumfile = self.sourcesum #not used right now.
 
         # read cems csv file.
-        sourcesum = SourceSummary(fname=self.sourcesum).sumdf  #uses default name for file.
+        sourcesum = sv.svcems.SourceSummary(fname=self.sourcesum).sumdf  #uses default name for file.
         print(sourcesum.columns.values)
         sourcesum = sourcesum.groupby(['ORIS','Name','Stack height (m)',
                                        'lat','lon']).sum()
         sourcesum.reset_index(inplace=True)
         sourcesum = sourcesum[['ORIS','Name','Total(tons)','lat','lon']]
         sgpd = make_gpd(sourcesum, 'lat', 'lon')
-        orishash = df2hash(sgpd, 'ORIS','geometry')
+        orishash = sv.svcems.df2hash(sgpd, 'ORIS','geometry')
         if self.neiconfig:
-           neisum = NeiSummary(fname=self.neiconfig)
+           neisum = sv.nei.NeiSummary(fname=self.neiconfig)
            neisum.load()
            ngpd = make_gpd(neisum.df, 'latitude', 'longitude')
            #eishash = df2hash(ngpd, 'EIS_ID', 'geometry')
@@ -164,15 +158,15 @@ class CemsObs(object):
            ngpd['ORIS'] = ngpd.apply(lambda row: 
                                      'EIS' + str(row['ORIS']).strip(), axis=1) 
            sgpd = pd.concat([sgpd, ngpd], sort=True)
-           orishash = df2hash(sgpd, 'ORIS','geometry')
+           orishash = sv.svcems.df2hash(sgpd, 'ORIS','geometry')
         # read the obs file.
         self.get_obs()
 
         if not os.path.isfile(obsfile): print('not file ' + obsfile)
-        odf = svo.read_csv(obsfile, hdrs=[0])
+        odf = sv.svobs.read_csv(obsfile, hdrs=[0])
         osum = odf[['siteid','latitude','longitude']]
         osum = make_gpd(osum.drop_duplicates(), 'latitude', 'longitude')
-        siteidhash = df2hash(osum,'siteid','geometry')
+        siteidhash = sv.svcems.df2hash(osum,'siteid','geometry')
  
         # loop thru each measurement stations.
         for site in siteidhash.keys(): 

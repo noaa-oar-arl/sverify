@@ -1,12 +1,12 @@
 #import svhy
-import svhy
+import sverify.svhy as svhy
 #from svhy import create_controls
 #from svhy import create_vmix_controls
 #from svhy import RunScript
 #from svhy import VmixScript
 #from svhy import DatemScript
-from svcems import SourceSummary
-from svens import create_ensemble_controls
+from sverify.svcems import SourceSummary
+from sverify.svens import create_ensemble_controls
 
 def options_run_main(options, d1,d2, source_chunks, tcmrun):
     #if 'ENS' in options.metfmt:

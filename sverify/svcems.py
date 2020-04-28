@@ -15,15 +15,14 @@ import pandas as pd
 import warnings
 
 # SO2 modules
-from svdir import date2dir
+from sverify.svdir import date2dir
 
 # MONETIO MODULES
 from monetio.obs import cems_api
 from monetio.obs import cems_mod
 import monetio.obs.obs_util as obs_util
 
-# MONET MODULES
-from monet.utilhysplit import emitimes
+from utilhysplit import emitimes
 
 
 # from monet.obs.epa_util import convert_epa_unit
@@ -1131,7 +1130,7 @@ class SEmissions(object):
             #plt.title(yearstr + 'Total for ' + str(oris) + " " + namehash[oris])
             plt.tight_layout()
             if save:
-                figname = self.tdir + "/cems." + str(oris) + ".jpg"
+                figname = self.tdir + "/cems." + str(oris) + ".png"
                 plt.savefig(figname)
             if quiet==0:
                 plt.show()
@@ -1242,7 +1241,7 @@ class SEmissions(object):
              
             if save:
                 locstr = locstr.replace('*','a')
-                figname = self.tdir + "/cems." + locstr + ".jpg"
+                figname = self.tdir + "/cems." + locstr + ".png"
                 plt.savefig(figname)
             if self.fignum > maxfig:
                 if not quiet:

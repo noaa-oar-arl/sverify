@@ -1,11 +1,11 @@
 import sys
 import matplotlib.pyplot as plt
 import pandas as pd
-from svhy import read_vmix
-from svobs import SObs
-from svmet import vmixing2metobs
-from svmet import metobs2matched
-from svcems import CEMScsv
+from sverify.svhy import read_vmix
+from sverify.svobs import SObs
+from sverify.svmet import vmixing2metobs
+from sverify.svmet import metobs2matched
+from sverify.svcems import CEMScsv
 ##------------------------------------------------------##
 #vmet is a MetObs object.
 #vmetdf is the dataframe associated with that.
@@ -45,7 +45,7 @@ def flowchart():
 
 def get_obs_vmet(options, d1, d2, area, source_chunks,
                       logfile):
-   from monet.util.svmet import obs2metobs
+   from sverify.svmet import obs2metobs
    obs = SObs([d1, d2], area, tdir=options.vdir)
    vmet = obs2metobs(obs.obs, met=False)
    return vmet
@@ -53,7 +53,7 @@ def get_obs_vmet(options, d1, d2, area, source_chunks,
 
 def get_vmet(options, d1, d2, area, source_chunks,
                       logfile):
-   from monet.util.nei import NeiSummary
+   from sverify.nei import NeiSummary
    print('GET VMET')
    # get vmixing data.
    df = read_vmix(options.vdir, d1, d2, source_chunks, sid=None)
@@ -66,7 +66,7 @@ def get_vmet(options, d1, d2, area, source_chunks,
       vmet = vmixing2metobs(df,obs.obs)
    else:
       print('No vmixing data available')
-      sys.exit()
+      #sys.exit()
       vmet = vmixing2metobs(df, pd.DataFrame())
    return vmet
 
@@ -82,7 +82,7 @@ def options_vmix_main(options, d1, d2, area, source_chunks,
    print('OPTIONS VMIX MAIN')
    with open(logfile, 'a') as fid:
      fid.write('Running vmix=1 options\n')
-   from monet.util.nei import NeiSummary
+   from sverify.nei import NeiSummary
 
    df = read_vmix(options.vdir, d1, d2, source_chunks, sid=None)
    #vmet = vmixing2metobs(df,obs.obs)

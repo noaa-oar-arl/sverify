@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
-from svcems import SEmissions
-from ptools import create_map
-from svens import ensemble_emitimes
+from sverify.svcems import SEmissions
+from sverify.ptools import create_map
+from sverify.svens import ensemble_emitimes
 
 #def emit_ens(options, tdir):
 #

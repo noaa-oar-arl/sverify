@@ -239,9 +239,9 @@ def set_hexbin(key, ax, ymax, tag=''):
             if not tag: tag = ''
             plt.sca(ax)
             key2 = key.replace(' ','')
-            plt.savefig(key2 + tag +  '.modeldistB.jpg')
+            plt.savefig(key2 + tag +  '.modeldistB.png')
         #plt.show()
             #if psqplot:
             #   plt.sca(ax4)
-            #   plt.savefig(tag + str(site) + '.met_distB.jpg')
+            #   plt.savefig(tag + str(site) + '.met_distB.png')
 

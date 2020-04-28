@@ -2,10 +2,10 @@ from os import path
 import sys
 import matplotlib.pyplot as plt
 import pandas as pd
-from svresults3 import DatemOutput
-from svcems import SourceSummary
-from svcems import CEMScsv
-from svens import create_member_list_srefA
+from sverify.svresults3 import DatemOutput
+from sverify.svcems import SourceSummary
+from sverify.svcems import CEMScsv
+from sverify.svens import create_member_list_srefA
 ##------------------------------------------------------##
 #vmet is a MetObs object.
 #vmetdf is the dataframe associated with that.
@@ -19,27 +19,36 @@ from svens import create_member_list_srefA
 
 
 def options_model_main(options, d1, d2, vmet,
-                      logfile, model_list=None):
+                      logfile, model_list=['sref']):
 
-    print('IN OPTIONS MODEL MAIN')
+    print('IN OPTIONS MODEL MAIN', model_list)
     #vmet.plot_all_winds()
     #sys.exit()
-    model_list = get_model_list(1)
     if options.model_list == ['sref']:
-       model_list = create_member_list_srefA()
+        model_list = create_member_list_srefA()
+    else:
+        model_list = get_model_list(1)
+    sss = SourceSummary(fname = options.tag + '.source_summary.csv')
+    orislist = sss.check_oris(10)
+    #orislist=[2103]
+    for model in model_list:
+        print(model)
+        tdir = path.join(options.tdir + model)
+        print('TDIR', tdir)
+        options_model_sub(vmet, tdir, orislist, [d1,d2], model)
     # used for plotting the time series.
-    if options.time_series:
-        options_model_ts(options, d1, d2, vmet, logfile, model_list=model_list)
+    #if options.time_series:
+    #    options_model_ts(options, d1, d2, vmet, logfile, model_list=model_list)
     #if options.prob_plots:
     #    options_model_prob(options, d1, d2, vmet, logfile, model_list=model_list)
-
+    #return vmet
 
 
 def options_model_ts(options, d1, d2, vmet, logfile, model_list=None):
     print('MODEL TS')
     #model_list  = get_model_list(1)
     #model_list = ['F2hrrr', 'B4nam12', 'B4wrf','B17nam12', 'Bnam12']
-    model_list=['F2hrrr'] 
+    #model_list=['F2hrrr'] 
     #model_list=['B4wrf'] 
     levlist = [[1,2]]
     levlist = [[1]]
@@ -53,9 +62,9 @@ def options_model_ts(options, d1, d2, vmet, logfile, model_list=None):
     #vmet.plot_ts(levlist=levlist) 
     #vmet.plot_autocorr(levlist=levlist) 
     #vmet.plot_spag(levlist=levlist) 
-    vmet.plot_model_hexbin(levlist=levlist, tag=model_list[0]) 
+    #vmet.plot_model_hexbin(levlist=levlist, tag=model_list[0]) 
     #vmet.plot_cdf(levlist=levlist) 
-    plt.show()
+    #plt.show()
 
 def get_model_list(number):
     model_list = []
@@ -72,8 +81,6 @@ def options_model_prob(options, d1, d2, vmet,
    """
    code for 
    """
-   print('Model list', model_list)
-
    #levlist = [[4,5]]
    levlist = [[1]]
    with open(logfile, 'a') as fid:
@@ -87,7 +94,18 @@ def options_model_prob(options, d1, d2, vmet,
    vmet.plot_prob(levlist=levlist) 
    plt.show()
 
+
+
 def options_model_sub(vmet, tdir, orislist, daterange, name):
+   """
+   INPUTS
+   vmet : MetObs object
+   tdir : string. Directory where datem output is.
+   orislist : list of ints
+   daterange :
+   name : name to write file to.
+   """
+
    print('ADDING model ', name)
    svr = DatemOutput(tdir, orislist=orislist, daterange=daterange)
    flist = svr.find_files()
@@ -104,3 +122,4 @@ def options_model_sub(vmet, tdir, orislist, daterange, name):
        #plt.show() 
    else:
        print('VMET IS EMPTY')
+   return vmet

@@ -9,12 +9,16 @@ import pandas as pd
 import sys
 # from arlhysplit.process import is_process_running
 # from arlhysplit.process import ProcessList
-from monet.utilhysplit.hcontrol import HycsControl
-from monet.utilhysplit.hcontrol import Species
-from monet.utilhysplit.hcontrol import ConcGrid
-from monet.utilhysplit.hcontrol import NameList
-from monet.utilhysplit.hcontrol import writelanduse
-from monet.utilhysplit.metfiles import MetFiles
+from utilhysplit.hcontrol import HycsControl
+from utilhysplit.hcontrol import Species
+from utilhysplit.hcontrol import ConcGrid
+from utilhysplit.hcontrol import NameList
+from utilhysplit.hcontrol import writelanduse
+from utilhysplit.metfiles import MetFiles
+import utilhysplit.datem  as datem
+from sverify.svdir import dirtree
+from sverify.svdir import date2dir
+from sverify.svdir import dir2date
 
 """
 NAME: svhy.py
@@ -185,7 +189,7 @@ def default_control(name, tdirpath, runtime, sdate, cpack=1,
         #particle.add_wetdep(wetdepstr)
         control.add_species(particle)
     control.add_location(latlon=(lat, lon), alt=200, rate=0, area=0)
-    control.write(query=True)
+    control.write(query=True, overwrite=True)
 
 
 def create_runlist(tdirpath, hdirpath, sdate, edate, timechunks):
@@ -207,11 +211,9 @@ def create_runlist(tdirpath, hdirpath, sdate, edate, timechunks):
             run duration.
     """
     from os import walk
-    from monet.utilhysplit import emitimes
+    from utilhysplit import emitimes
 
     # from arlhysplit.runh import getmetfiles
-    from monet.util.svdir import date2dir
-    from monet.util.svdir import dir2date
 
     dstart = sdate
     dend = edate
@@ -285,8 +287,8 @@ def find_numpar(emitfile, controlfile):
 
 def read_vmix(tdirpath, sdate, edate, timechunks, sid=None, verbose=False):
     from os import walk
-    from monet.utilhysplit import vmixing
-    from monet.util.svdir import dirtree
+    from utilhysplit import vmixing
+    from sverify.svdir import dirtree
     dtree = dirtree(tdirpath, sdate, edate, chkdir=False, dhour=timechunks)
     vmix = vmixing.VmixingData()
     for dirpath in dtree:
@@ -310,7 +312,7 @@ def read_vmix(tdirpath, sdate, edate, timechunks, sid=None, verbose=False):
                                        verbose=verbose)
                              except:
                                  print('COULD NOT ADD DATA', fl, xsid)
-                             print('df', vmix.df)
+                             #print('df', vmix.df)
     if vmix.df.empty:
        print('No vmixing data found in ', dirpath)
     return vmix.df
@@ -321,15 +323,16 @@ def create_vmix_controls(tdirpath,hdirpath,sdate,edate,timechunks,
     read the base control file in tdirpath CONTROL.0
     """
     from os import walk
+    ## needed for ensemble data which has the 09 and 03 forecast cycles.
+    dtadd = datetime.timedelta(hours=24)
     # from arlhysplit.runh import getmetfiles
-    from monet.util.svdir import dirtree
-    from monet.util.datem import read_datem_file
-    from monet.util.svdir import dir2date
 
     dstart = sdate
     dend = edate
     ##determines meteorological files to use.
     met_files = MetFiles(metfmt) 
+    if 'sref' in metfmt:
+        met_files.set_mdt(24) 
     runlist = []  #list of RunDescriptor Objects
     if hdirpath[-1] != '/': hdirpath += '/'
     hysplitdir = hdirpath + "exec/"
@@ -348,7 +351,7 @@ def create_vmix_controls(tdirpath,hdirpath,sdate,edate,timechunks,
                    # read the datem.txt file
                     cols=['year','month','day','hour','duration','lat','lon','val','sid','ht']
                     print('DATEM FILE', d1+fl)
-                    dfdatem = read_datem_file(d1 + fl, colra=cols, header=2) 
+                    dfdatem = datem.read_datem_file(d1 + fl, colra=cols, header=2) 
                     dfdatem = dfdatem[['lat','lon','sid']]
                     dfdatem = dfdatem.drop_duplicates()
                     # do not overwrite, if these files already created
@@ -373,7 +376,8 @@ def create_vmix_controls(tdirpath,hdirpath,sdate,edate,timechunks,
                                   working_directory=d1, rtype='vmixing')
                         #control.read()
                         sdate = dir2date(tdirpath, dirpath)
-                        control.date = sdate
+                        control.date = sdate 
+                        timechunks2 = timechunks + int(dtadd.seconds/3600.0)
                         ##remove all the locations first and then add
                         ##locations that correspond to emittimes file.
                         control.remove_locations()
@@ -383,7 +387,7 @@ def create_vmix_controls(tdirpath,hdirpath,sdate,edate,timechunks,
                         ###Add the met files.
                         control.add_duration(timechunks-1)
      
-                        mfiles = met_files.get_files(control.date, timechunks)
+                        mfiles = met_files.get_files(control.date-dtadd, timechunks2)
                         for mf in mfiles:
                             if os.path.isfile(mf[0] + mf[1]):
                                 control.add_metfile(mf[0], mf[1])
@@ -391,7 +395,8 @@ def create_vmix_controls(tdirpath,hdirpath,sdate,edate,timechunks,
                         #    cg.outfile += "." + suffix
                         if control.num_met > 12: metgrid=True
                         else: metgrid=False 
-                        control.write(metgrid=metgrid, query=False)
+                        control.write(metgrid=metgrid, query=False,
+                                      overwrite=True)
                         run = RunDescriptor(d1, suffix, hysplitdir, "vmixing",
                                              parinit='None')
                         runlist.append(run)
@@ -419,9 +424,6 @@ def nei_source_generator(df):
 def create_nei_runlist(tdirpath, hdirpath, sourcedf, sdate, edate, timechunks, 
                  units='ppb', tcm=False):
     from os import walk
-    from monet.util.svdir import dirtree
-    from monet.util.svdir import date2dir
-    from monet.util.svdir import dir2date
     #dstart = sdate
     #dend = edate
     hysplitdir = hdirpath + "exec/"
@@ -450,9 +452,6 @@ def nei_controls(tdirpath, hdirpath, sourcedf, sdate, edate, timechunks, metfmt,
     # emission rate
     # heat input 
     from os import walk
-    from monet.util.svdir import dirtree
-    from monet.util.svdir import date2dir
-    from monet.util.svdir import dir2date
     control = HycsControl(fname="CONTROL.0", working_directory=tdirpath)
     control.read()
 
@@ -567,11 +566,8 @@ def create_controls(tdirpath, hdirpath, sdate, edate, timechunks, metfmt, units=
     # period. Then use 
     """
     from os import walk
-    from monet.utilhysplit import emitimes
+    from utilhysplit import emitimes
     # from arlhysplit.runh import getmetfiles
-    from monet.util.svdir import dirtree
-    from monet.util.svdir import date2dir
-    from monet.util.svdir import dir2date
 
 
     dstart = sdate

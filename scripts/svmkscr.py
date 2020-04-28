@@ -5,15 +5,15 @@ import sys
 #import numpy as np
 #import matplotlib.pyplot as plt
 #import os
-from monet.util import svens
-from monet.util import options_process
-from monet.util import svconfig
-from monet.util.svhy import VmixScript
-from monet.util.svhy import DatemScript
-from monet.util.svhy import RunScript
-from monet.util.svhy import create_nei_runlist
-from monet.util.svhy import create_vmix_controls
-from monet.util.svhy import create_runlist
+from sverify import svens
+from sverify import options_process
+from sverify import svconfig
+from sverify.svhy import VmixScript
+from sverify.svhy import DatemScript
+from sverify.svhy import RunScript
+from sverify.svhy import create_nei_runlist
+from sverify.svhy import create_vmix_controls
+from sverify.svhy import create_runlist
 
 # import cartopy.crs as ccrs
 # import cartopy.feature as cfeature
@@ -129,7 +129,7 @@ rfignum = 1
 # bash scripts to run c2datem on the results.
 
 if opts.nei:
-    from monet.util import nei
+    from sverify import nei
     ns = nei.NeiSummary()
     print(options.tdir, options.neiconfig)
     neidf = ns.load(fname = options.tdir + '/neifiles/' + options.neiconfig) 
@@ -148,12 +148,15 @@ if opts.nei:
               options.tag + "_nei_datem.sh", nei_runlist, options.tdir, options.cunits, poll=1
               )
 
-if opts.vmix:
+if opts.vmix and not opts.ens:
     print('writing script to run vmix ')
-    runlist = create_vmix_controls(options.tdir, options.hdir, d1, d2,
+    runlist = create_vmix_controls(options.vdir, options.hdir, d1, d2,
                                    source_chunks, metfmt='None', write=False)
     rs = VmixScript(options.tag + '.vmix.sh', runlist, options.tdir)
-
+elif opts.vmix and opts.ens:
+    runlist = create_ensemble_vmix_controls(options.tdir, options.hdir, d1, d2,
+                                   source_chunks, options.metfmt)
+    svens.create_ensemble_vmix(options, d1, d2, source_chunks)
 
 # create ensemble scripts for running.
 if opts.run and not opts.nei and opts.ens:

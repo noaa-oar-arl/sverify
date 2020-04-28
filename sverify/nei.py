@@ -10,9 +10,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 #from urllib.parse import quote
 import monetio.obs.obs_util as obs_util
-from svconstants import Constants
-from svcems import determine_size
-from svcems import determine_color
+from sverify.svconstants import Constants
+from sverify.svcems import determine_size
+from sverify.svcems import determine_color
 """
 PGRMMER: Alice Crawford   ORG: ARL
 This code written at the NOAA air resources laboratory

@@ -1,8 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from svresults3 import DatemOutput
-from svcems import SourceSummary
-from svcems import CEMScsv
+import sverify as sv
 
 ##------------------------------------------------------##
 #vmet is a MetObs object.
@@ -13,7 +12,7 @@ def time_series(options, d1, d2, vmet,
                       logfile):
    with open(logfile, 'a') as fid:
      fid.write('Running options.datem\n')
-   sss = SourceSummary(fname = options.tag + '.source_summary.csv')
+   sss = sv.svcems.SourceSummary(fname = options.tag + '.source_summary.csv')
    orislist = sss.check_oris(10)
    svr = DatemOutput(options.tdir, orislist=orislist, daterange=[d1,d2])
    flist = svr.find_files()

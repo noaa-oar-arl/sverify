@@ -9,8 +9,7 @@ import pandas as pd
 import sys
 # from arlhysplit.process import is_process_running
 # from arlhysplit.process import ProcessList
-import svhy
-from svhy import create_runlist
+import sverify.svhy as svhy
 #from monet.util.svhy import create_controls
 #from monet.util.svhy import RunScript
 #from monet.util.svhy import DatemScript
@@ -52,14 +51,23 @@ class SV_SREF(SVEnsemble):
             memberlist.append(zzz + '.ctl')
         return memberlist
 
-    
-
-
 def create_ens_dfile(obs, d1, source_chunks, run_duration, tdir):
     memberlist = create_member_list_sref()
     dirnamelist = make_ens_dirs(tdir, memberlist)
     for edir in dirnamelist:
         obs.obs2datem(d1, ochunks=(source_chunks, run_duration), tdir=edir) 
+
+
+def create_ensemble_vmix(options, d1, d2,source_chunks):
+    memberlist = create_member_list_sref()
+    dirnamelist = make_ens_dirs(options.tdir, memberlist)
+    iii=0
+    for edir, memlist  in zip(dirnamelist,memberlist):
+        print(edir)
+        runlist = svhy.create_vmix_controls(os.path.join(options.tdir, edir), options.hdir, d1,d2, source_chunks,
+                                       metfmt='None', write=False)
+        rs = svhy.VmixScript(options.tag + '.vmix.sh', runlist, edir)
+
 
 
 def create_ensemble_datem_scripts(options, d1, d2, source_chunks):
@@ -77,8 +85,6 @@ def create_ensemble_datem_scripts(options, d1, d2, source_chunks):
                        poll=1)
         iii+=1
     return rs
-
-
 
 def create_ensemble_scripts(options, d1, d2, source_chunks, check):
     memberlist = create_member_list_sref()
@@ -100,15 +106,17 @@ def ensemble_defaults(tdir):
     # to the ensemble directories.
     memberlist = create_member_list_sref()
     dirnamelist = make_ens_dirs(tdir, memberlist)
+   
     for edir in dirnamelist:
-        if not os.path.isfile(os.path.join(edir, 'CONTROL.0')):
-            callstr = 'cp ' + os.path.join(tdir, 'CONTROL.0')
-            callstr +=  ' ' + edir + '/'
-            call(callstr, shell=True)      
-        if not os.path.isfile(os.path.join(edir, 'SETUP.0')):
-            callstr = 'cp ' + os.path.join(tdir, 'SETUP.0')
-            callstr +=  ' ' + edir + '/'
-            call(callstr, shell=True)      
+        #if not os.path.isfile(os.path.join(edir, 'CONTROL.0')):
+        callstr = 'cp ' + os.path.join(tdir, 'CONTROL.0')
+        callstr +=  ' ' + edir + '/'
+        print('CALLSTRING', callstr)
+        call(callstr, shell=True)      
+        #if not os.path.isfile(os.path.join(edir, 'SETUP.0')):
+        callstr = 'cp ' + os.path.join(tdir, 'SETUP.0')
+        callstr +=  ' ' + edir + '/'
+        call(callstr, shell=True)      
 
 
 def ensemble_emitimes(options, metfmt, ef, source_chunks):
@@ -147,6 +155,23 @@ def create_nei_ensemble_controls(tdirpath, hdirpath, neidf, sdate, edate, timech
         runlist = svhy.create_controls(tdir, options.hdir, d1, d2, source_chunks,
                                   sref, options.cunits, tcm, orislist) 
         iii+=1 
+
+def create_ensemble_vmix_controls(tdirpath, hdir, d1, d2, source_chunks,
+                                  metfmt): 
+    fhour=''               #pick the forecast hour to use
+    memberlist = create_member_list_sref()
+    iii = 0
+    # create directories for ensemble members.
+    if 'ENS' in metfmt: metfmt = metfmt.replace('ENS','')
+    dirnamelist = make_ens_dirs(tdirpath, memberlist)
+    for sref in generate_sref_ens(metfmt, fhour, memberlist):
+        tdir = tdirpath + dirnamelist[iii]
+        print('ENSEMBLE', tdir, sref)
+        import sys
+        runlist = svhy.create_vmix_controls(
+                                  tdir, hdir, d1, d2, source_chunks,
+                                  sref)
+        iii+=1
 
 def create_ensemble_controls(tdirpath, hdir, d1, d2, source_chunks, metfmt, units="ppb",
                     tcm=False, orislist=None):
@@ -193,11 +218,12 @@ def create_member_list_sref():
 
 def create_member_list_srefA():
     memberlist = []
-    for zzz in ['nmb','arw']:
+    #for zzz in ['nmb','arw']:
+    for zzz in ['arw']:
         for iii in range(1,7):
             memberlist.append(zzz + '_n' + str(iii))
             memberlist.append(zzz + '_p' + str(iii))
-    for zzz in ['nmb','arw']:
-        memberlist.append(zzz + '_ctl')
+    #for zzz in ['nmb','arw']:
+    #    memberlist.append(zzz + '_ctl')
     return memberlist
 

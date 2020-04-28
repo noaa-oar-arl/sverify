@@ -5,14 +5,7 @@ import sys
 from optparse import OptionParser
 #import pandas as pd
 #import numpy as np
-from svobs import SObs
-from svmet import obs2metobs
-from svish import Mverify
-from ptools import create_map
-from svcems import SourceSummary
-from nei import NeiData
-from nei import NeiSummary
-import svens
+import sverify as sv
 
 """
 FUNCTIONS
@@ -33,13 +26,14 @@ def autocorr(options, d1, d2, area, source_chunks,
 
 def create_obs(options, d1, d2, area, rfignum):
     # create the SObs object to get AQS data.    
-    obs = SObs([d1, d2], area, tdir=options.tdir)
+    obs = sv.svobs.SObs([d1, d2], area, tdir=options.tdir)
     obs.fignum = rfignum
     obs.find(tdir=options.tdir, test=options.runtest, units=options.cunits)
     return obs
 
 def create_metobs(obs, options, met=True):
-    meto = obs2metobs(obs, met=met)
+    #meto = sv.svmet.obs2metobs(obs, met=met)
+    meto = sv.svmet.obs2metobs(obs)
     meto.to_csv(options.tdir, csvfile = obs.csvfile)
     meto.set_geoname(options.tag + '.geometry.csv')
     return meto
@@ -60,8 +54,8 @@ def make_geometry(options, obsfile, logfile):
     #t4 = os.path.isfile(neifile)
     #if not t4: neifile=None 
     if t1 and t2 and t3:
-        from monet.util.svan1 import CemsObs
-        from monet.util.svan1 import gpd2csv
+        from sverify.svan1 import CemsObs
+        from sverify.svan1 import gpd2csv
         cando = CemsObs(obsfile, cemsfile, sumfile, neifile)
         osum, gsum = cando.make_sumdf()
         with open(logfile, 'a') as fid:
@@ -113,7 +107,7 @@ def options_obs_main(options, d1, d2, area, source_chunks,
     # create the datem files in each subdirectory.
     if svensemble:
         # if ensemble runs create dfiles in each subdirectory.
-        svens. create_ens_dfile(obs, d1, source_chunks, run_duration,
+        sv.svens.create_ens_dfile(obs, d1, source_chunks, run_duration,
                                 options.tdir)
     else:
         obs.obs2datem(d1, ochunks=(source_chunks, run_duration), tdir=options.tdir)
@@ -132,7 +126,7 @@ def options_obs_main(options, d1, d2, area, source_chunks,
 
     # create 2d distributions of wind direction and so2 measurements.
     if options.neiconfig:
-         nei = NeiSummary()
+         nei = sv.nei.NeiSummary()
          nei.load(options.tdir + 'neifiles/' + options.neiconfig)
          meto.add_nei_data(nei.df)
 
@@ -148,9 +142,6 @@ def options_obs_main(options, d1, d2, area, source_chunks,
 
 #def make_map_nice(options, obs, d1, d2, area):
     
-
-
-
     
 def make_map(options, obs, d1, d2, area):
     ################################################################################ 
@@ -160,14 +151,14 @@ def make_map(options, obs, d1, d2, area):
     if options.quiet == 1:
         plt.close("all")
         fignum = 1
-    figmap, axmap, gl = create_map(fignum)
+    figmap, axmap, gl = sv.ptools.create_map(fignum)
     figmap.set_size_inches(15,15)
     # put the obs data on the map
     obs.map(axmap, txt=txt)
     print("map fig number  " + str(fignum))
     # put the cems data on the map if the source_summary file exists..
     if os.path.isfile(options.tdir + options.tag + ".source_summary.csv"):
-        cemsum = SourceSummary(options.tdir, options.tag + ".source_summary.csv")
+        cemsum = sv.svcems.SourceSummary(options.tdir, options.tag + ".source_summary.csv")
         #if not cemsum.sumdf.empty:
         cemsum.map(axmap, txt=txt)
     # put the ISH sites on the map. 
@@ -175,7 +166,7 @@ def make_map(options, obs, d1, d2, area):
         #with open(logfile, 'a') as fid:
         #     fid.write('running ish options\n')
         print('FINDING ISH DATA')
-        ishdata = Mverify([d1, d2], area)
+        ishdata = sv.svish.Mverify([d1, d2], area)
         test = ishdata.from_csv(options.tdir)
         if not test: ishdata.find_obs()
         if not test: ishdata.save(options.tdir)
@@ -186,14 +177,14 @@ def make_map(options, obs, d1, d2, area):
     if options.neiconfig:
         nei = NeiSummary(options.tdir + 'neifiles/' + options.neiconfig)
     else:
-        nei = NeiData(options.ndir)
+        nei = sv.nei.NeiData(options.ndir)
     nei.load()
     if not options.neiconfig:
         nei.filter(area)
         nei.write_summary(options.tdir, options.tag + '.nei.csv')
     nei.map(axmap)
     plt.sca(axmap)
-    plt.savefig(options.tdir + "map.jpg")
+    plt.savefig(options.tdir + "map.png")
     if options.quiet < 2:
         plt.show()
     else:

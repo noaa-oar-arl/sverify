@@ -85,7 +85,7 @@ class ReliabilityCurve:
         ax1.plot([0,1], [0,1], '-k')
         ax2.plot(xxx, nnn)
         ax2.set_yscale('log')
-        plt.savefig('reliability.jpg')
+        plt.savefig('reliability.png')
         fig2 = plt.figure(2)
         ax3 = fig2.add_subplot(1,1,1)
         #with open('reliability.txt', 'w') as fid:

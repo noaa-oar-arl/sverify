@@ -14,13 +14,14 @@ import warnings
 #MONETIO modules
 from monetio.obs import aqs as aqs_mod
 from monetio.obs import airnow
-import monetio.obs.obs_util as obs_util
+from monetio.obs import obs_util
+from utilhysplit import datem
 
 #MONET MODULES in UTILHYSPLIT
-from monet.utilhysplit import statmain
+from utilhysplit import statmain
 
 #MONET MODULES THAT should be SO2 modules
-from svdir import date2dir
+from sverify.svdir import date2dir
 
 """
 FUNCTIONS
@@ -35,8 +36,19 @@ CLASSES
 SObs
 
 """
+def obs_pivot(df):
+    """
+    df: pandas dataframe
+    Returns:
+    wpivot :   dataframe 
+    Similar to long_to_wide.
+    """
+    import pandas as pd
+    wpivot = pd.pivot_table(df,
+        values=['obs'], index=['time', 'siteid', 'latitude','longitude'],
+        columns=['variable','units']).reset_index()
 
-
+    return wpivot
 
 def print_info(df, cname):
     """
@@ -222,7 +234,7 @@ class SObs(object):
                 alist.append(ts.autocorr(lag=nnn))
             plt.plot(nlist, alist, 'k.')
             plt.title(str(sid))
-            plt.savefig(str(sid) + 'obs.autocorr.jpg')
+            plt.savefig(str(sid) + 'obs.autocorr.png')
             plt.show()    
 
     def get_peaks(self, sidlist=None, pval=[0.95,1], plotfigs=True):
@@ -317,7 +329,7 @@ class SObs(object):
             ax.plot(ts2.index.tolist(), ts2.values, '-b.')
             ax.plot(ms.index.tolist(), ms.values, '-r')
             if save:
-                figname = self.tdir + "/so2." + str(sid) + ".jpg"
+                figname = self.tdir + "/so2." + str(sid) + ".png"
                 plt.savefig(figname)
             if self.fignum > maxfig:
                 if not quiet:
@@ -400,9 +412,11 @@ class SObs(object):
         elif not self.pload:
             print("LOADING from EPA site. Please wait\n")
             if getairnow:
-                aq = airnow.AirNow()
-                aq.add_data([self.d1, self.d2], download=True)
+                #aq = airnow.AirNow()
+                print('AIRNOW')
+                self.obs = airnow.add_data([self.d1, self.d2], download=True)
             else:
+                print('AQS')
                 aq = aqs_mod.AQS()
                 self.obs = aq.add_data(
                     [self.d1, self.d2],
@@ -411,7 +425,6 @@ class SObs(object):
                 )
             # aq.add_data([self.d1, self.d2], param=['SO2','WIND','TEMP'], download=False)
             #self.obs = aq.df.copy()
-       
         print("HEADERS in OBS: ", self.obs.columns.values)
         if self.obs.empty: print('Obs empty ')
         # filter by area.
@@ -473,7 +486,7 @@ class SObs(object):
         tdir: string
               top level directory for output.
         """
-        print("WRITING MEAS Datem FILE")
+        print("WRITING MEAS Datem FILE ", edate)
         print(self.obs["units"].unique())
         d1 = edate
         done = False
@@ -486,9 +499,10 @@ class SObs(object):
             d3 = d1 + datetime.timedelta(hours=oe - 1)
             odir = date2dir(tdir, d1, dhour=oc, chkdir=True)
             dname = odir + "datem.txt"
-            obs_util.write_datem(
+            print(dname)
+            datem.write_datem(
                 self.obs, sitename="siteid", drange=[d1, d3], dname=dname,
-                fillhours=1
+                fillhours=1, verbose=True
             )
             d1 = d2 + datetime.timedelta(hours=1)
             iii += 1
@@ -511,7 +525,7 @@ class SObs(object):
         return ohash
 
     #def try_ar(self):
-    #    from monet.util.armodels import ARtest
+    #    from util.armodels import ARtest
     #    for sid, ts, ms in self.generate_ts():
     #        nnn= int(len(ts)/2.0)
     #        ts1 = ts[0:nnn]

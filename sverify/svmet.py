@@ -12,11 +12,12 @@ import warnings
 import pylab as pl
 # from arlhysplit.models.datem import mk_datem_pkl
 #from monet.obs.epa_util import convert_epa_unit
-from monet.utilhysplit import statmain
-from monet.util import tools
-import ptools
-from svan1 import geometry2hash
-
+from utilhysplit import statmain
+#from monet.util import tools
+import sverify.ptools as ptools
+from sverify.svan1 import geometry2hash
+import sverify.svobs as svobs
+import sverify.options_vmix as options_vmix
 
 """
 FUNCTIONS
@@ -30,6 +31,36 @@ MetObs
 
 """
 
+
+class VmixEns:
+
+
+    def __init__(self, d1, d2, step, mlist=['sref']):
+        # step is like source_chunks
+        self.df = pd.DateFrame()
+        self.sidlist = []
+        memberlist = create_member_list_sref()
+        dirnamelist = make_ens_dirs(tdirpath, memberlist)
+        iii=0
+        for dirname in dirnamelist:
+            vdf = options_vmix.read_vmix(dirname, d1, d2, step)
+            vdf['met'] = memberlist[iii]
+            if iii==0:
+               self.df = vdf
+            else:
+               self.df = pd.concat(self.df, vdf)
+            iii+=1       
+        vlist = self.df.columns.values
+        #[date, PSQ, MixHgt, 10xKz, U*, Zo, Zterr, Kh, 10mWSPD
+        # DSWF, SFCP, RH2m, T02m, Density, Cld, u10m, v10m, WDIR,
+        # latitude, longitude, met, sid
+        self.sidlist = self.df.sid.unique()     
+ 
+    def pivot(self, val):
+        dfm = self.df[['date',val,'met','sid']]
+        pdf = pd.pivot_table(dfm, values=val, index=['date'],
+                             columns=['sid','met'])
+        return pdf
 
 
 def obs2metobs(obsobject):
@@ -55,10 +86,6 @@ def vmixing2metobs(vmix, obs):
         obs.columns = ['date','sid','so2','mdl']
         print(obs['sid'].unique())
         print(vmix['sid'].unique())
-
-        # we are mergint this left onto the obs.
-        # what happens if the obs are missing?
-        # seems like we should fill in missing values for the obs.
 
         # use an outer join because vmix will have data for every hour.
         # this should put Nan values in missing obs sites.
@@ -578,7 +605,7 @@ class MetObs(object):
 
 
     def add_obs(self, obs):
-        df = tools.long_to_wideB(obs)
+        df = svobs.obs_pivot(obs)
         self.rename_columns()
         testcols = ['WD','RH','TEMP','WS']
         overlap = [x for x in testcols if x in self.df.columns.values]
@@ -587,7 +614,7 @@ class MetObs(object):
         # Currenlty this overwrites anything that used to be in self.df
         # only keep rows (sites) which have Met data.
         print("Making metobs from obs")
-        self.df = tools.long_to_wideB(obs)  # pivot table
+        self.df =svobs.obs_pivot(obs)  # pivot table
         self.columns_original = self.df.columns.values
         self.rename_columns()
         # checking to see if there is met data in the file.
@@ -686,7 +713,7 @@ class MetObs(object):
             df.to_csv(tdir + str(site) + "met.csv",  header=True, float_format="%g")
 
     def plot_cdf(self, levlist=None, save=True, quiet=False, thresh=2.5):
-        from monet.utilhysplit import statmain
+        from utilhysplit import statmain
         if self.df.empty: return -1
         sns.set()
         sns.set_style('whitegrid')

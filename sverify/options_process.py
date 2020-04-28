@@ -19,7 +19,6 @@ class SVparams:
             self.ensemble=True
         else:
             self.ensemble=False
-    
 
     def make_d1d2(self, drange):
         temp = drange.split(":")

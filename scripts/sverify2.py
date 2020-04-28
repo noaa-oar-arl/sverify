@@ -133,15 +133,15 @@ if runtest:
 if options.defaults and not svp.ensemble:
     with open(logfile, 'a') as fid:
         fid.write('Running  defaults\n')
-    from monet.util.svhy import default_setup
-    from monet.util.svhy import default_control
+    from sverify.svhy import default_setup
+    from sverify.svhy import default_control
     print("writing control and setup")
     # if units='ppb' then ichem=6 is set to output mixing ratios.
     default_setup("SETUP.0", options.tdir, units=options.cunits)
     default_control("CONTROL.0", options.tdir, run_duration, d1, area=area)
 # if ensemble then copy CONTROL.0 and SETUP.0 to ensemble directories
 if options.defaults and svp.ensemble:
-    from monet.util.svens import ensemble_defaults
+    from sverify.svens import ensemble_defaults
     ensemble_defaults(options.tdir)
 
 ##------------------------------------------------------##
@@ -153,7 +153,7 @@ if options.cems:
    # rfignum integer
    # FILES CREATED
    # source_summary.csv
-   from monet.util import options_cems 
+   from sverify import options_cems 
    ef, rfignum = options_cems.options_cems_main(options, d1, d2, area, 
                                                  source_chunks, logfile,
                                                 svp.ensemble)
@@ -184,25 +184,25 @@ if options.obs:
 # bash script to run vmixing
 if options.create_runs:
    tcmrun=False
-   from monet.util.options_run import options_run_main
+   from sverify.options_run import options_run_main
    options_run_main(options, d1, d2, source_chunks, tcmrun)
 
 
 oldrunlist = False
 runlist = []
 if oldrunlist:
-    from monet.util.svhy import create_controls
-    from monet.util.svhy import create_vmix_controls
-    from monet.util.svhy import RunScript
-    from monet.util.svhy import VmixScript
-    from monet.util.svhy import DatemScript
-    from monet.util.svcems import SourceSummary
+    from sverify.svhy import create_controls
+    from sverify.svhy import create_vmix_controls
+    from sverify.svhy import RunScript
+    from sverify.svhy import VmixScript
+    from sverify.svhy import DatemScript
+    from sverify.svcems import SourceSummary
     with open(logfile, 'a') as fid:
          fid.write('creating CONTROL files\n')
 
     if options.neiconfig:
-       from monet.util import nei
-       from monet.util.svhy import nei_controls
+       from sverify import nei
+       from sverify.svhy import nei_controls
        ns = nei.NeiSummary()
        print('WRITING EIS CONTROLS')
        sss = SourceSummary(fname = options.tag + '.source_summary.csv')
@@ -265,14 +265,14 @@ if oldrunlist:
 # this part was moved to a mkscripts.py executable.
 
 if options.write_scripts:
-    from monet.util.svhy import VmixScript
-    from monet.util.svhy import DatemScript
-    from monet.util.svhy import RunScript
+    from sverify.svhy import VmixScript
+    from sverify.svhy import DatemScript
+    from sverify.svhy import RunScript
     with open(logfile, 'a') as fid:
          fid.write('writing scripts\n')
     print('writing vmix script')
     #if not runlist:
-    from monet.util.svhy import create_runlist
+    from sverify.svhy import create_runlist
     runlist = create_runlist(options.tdir, options.hdir, d1, d2, source_chunks)
     rs = VmixScript(options.tag + '.vmix.sh', runlist, options.tdir)
     rs = RunScript(options.tag + ".sh", runlist, options.tdir)
@@ -326,8 +326,8 @@ if options.vmix==1:
 # Plots of results
 ##------------------------------------------------------##
 if options.results:
-    from monet.util import options_model
-    from monet.util import nei
+    from sverify import options_model
+    from sverify import nei
     print('OPTIONS RESULTS')
     if not options.vmix==1: 
         #vmet = meto
