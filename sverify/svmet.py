@@ -12,7 +12,7 @@ import warnings
 import pylab as pl
 # from arlhysplit.models.datem import mk_datem_pkl
 #from monet.obs.epa_util import convert_epa_unit
-from utilhysplit import statmain
+from utilhysplit.evaluation import statmain
 #from monet.util import tools
 import sverify.ptools as ptools
 from sverify.svan1 import geometry2hash
@@ -691,6 +691,52 @@ class MetObs(object):
         model_list = self.model.keys()
         return len(model_list)      
 
+    def make_datem_output(self, sid, oris, modelkey, level):
+        from utilhysplit import datem
+        duration = '0100'
+        height = 20
+        model = self.model[modelkey].df
+        model = model[model.source == oris]
+        model = model[model.sid == sid]
+        model = model[model.lev == level]
+        cols = ['siteid','time','latitude','longitude','obs','source','pollnum']
+        cols.extend(['stype','lev','model'])
+        print(model.columns.values)
+        print('----')
+        print(cols)
+        model.columns = cols
+        
+        metdata = self.df[self.df.siteid == sid]
+
+        merged = pd.merge(model, metdata)
+
+        
+        keep = ['time','model','obs','latitude','longitude','siteid']
+        keep.extend(['WDIR','WS','lev'])
+
+        new = merged[keep]
+        new['duration'] = duration
+        new['height'] = height
+ 
+        order = ['time','duration','latitude','longitude','obs','model','siteid','height']
+        order.append('WDIR')
+        order.append('WS')
+        new2 = new[order]
+        new2['month'] = new2['time'].map(lambda x: x.month)
+        year  = new2['time'].map(lambda x: x.year)
+        year = year.unique()[0] 
+        for month in np.arange(1,13):
+            new3 = new2[new2.month == month]
+            new3 = new3[order]
+            new3.set_index('time', inplace=True)
+            new3 = new3.resample("H").asfreq()
+            new3.reset_index(inplace=True)
+            new3.fillna(0, inplace=True) 
+            dname = str(sid) + '.month' + str(month) + '.' + str(year) + 'DATEM.txt'
+            datem.frame2datem(dname, new3, cnames=order)
+
+ 
+
     def add_model_ts(self, sid, tp='ORIS', model_list=None, levlist=None ):
         if not model_list:
            model_list = self.model.keys()
@@ -821,7 +867,7 @@ class MetObs(object):
             fig.autofmt_xdate()
             tag = self.tag
             if not tag: tag = ''
-            plt.savefig(tag + str(site) + '.spag.jpg')
+            plt.savefig(tag + str(site) + '.spag.png')
             plt.show()
 
     def plot_hist(self, levlist, save=True, quiet=False, thresh=2.5):
@@ -965,7 +1011,7 @@ class MetObs(object):
             fig.autofmt_xdate()
             tag = self.tag
             if not tag: tag = ''
-            plt.savefig(tag + str(site) + '.prob.jpg')
+            plt.savefig(tag + str(site) + '.prob.png')
             plt.show()
             plt.close()
             rc.reliability_add(so2, vals)
@@ -1056,7 +1102,7 @@ class MetObs(object):
                         ptools.set_hexbin(var,axhash[var], ymax, tag=tag)
 
                     #if not tag: tag = self.tag
-                    #plt.savefig(tag + str(site) + '.model_hex.jpg')
+                    #plt.savefig(tag + str(site) + '.model_hex.png')
             plt.show() 
             plt.cla()
             plt.clf()
@@ -1113,7 +1159,7 @@ class MetObs(object):
             ax1.plot(nlist, wdir_auto, '--r')
             ax1.plot(nlist, wspd_auto, '--g')
             plt.title(str(site))
-            plt.savefig(str(site) + 'autocorr.jpg')
+            plt.savefig(str(site) + 'autocorr.png')
             plt.show() 
 
     def plot_ts(self, levlist=None, save=True, quiet=False):
@@ -1250,8 +1296,8 @@ class MetObs(object):
             if save:
                 tag = self.tag
                 if not tag: tag = ''
-                print('SAVING', plume+str(site) + '.met_ts.jpg')
-                plt.savefig(plume + str(site) + '.met_ts.jpg')
+                print('SAVING', plume+str(site) + '.met_ts.png')
+                plt.savefig(plume + str(site) + '.met_ts.png')
             if not quiet:
                 plt.show()
             plt.close() 
@@ -1324,7 +1370,7 @@ class MetObs(object):
                 ptools.set_legend(ax, bw=0.60)
                 plt.title(str(site) + ' ORIS: ' + str(oris[0]))
                 plt.tight_layout(rect=[0,0,0.75,1])
-                plt.savefig(str(site) + 'cpdf.jpg')
+                plt.savefig(str(site) + 'cpdf.png')
                 plt.show() 
     
 
@@ -1367,7 +1413,7 @@ class MetObs(object):
                 ptools.set_legend(ax, bw=0.60)
                 plt.title(str(site) + str(var1))
                 #plt.tight_layout(rect=[0,0,0.75,1])
-                plt.savefig(str(site) + 'cpdf.jpg')
+                plt.savefig(str(site) + 'cpdf.png')
                 self.fignum +=1
             plt.show() 
 
@@ -1506,15 +1552,12 @@ class MetObs(object):
                             step=step, density=density)
         return valA, valB, nnn
 
-
-
     def plothexbin(self, save=True, quiet=True): 
         # 2d histograms of obs and wind speed
         # 2d histogram of obs and wind direction.
         psqplot=False
         if self.df.empty: return -1
         slist = self.get_sites()
-
         self.date2hour()
         for site in slist:
             axhash, szhash = ptools.setuphexbin(setup='individual')
@@ -1553,8 +1596,8 @@ class MetObs(object):
 
             hexbin(xtest, ztest, axhash['wdir'], cbar=cbar,sz=szhash['wdir'])  
             ymax = np.max(ztest)
-            addplants(site, axhash['wdir'], ymax=ymax, dthresh=50,  geoname=self.geoname,
-                      add_text=False)
+            #addplants(site, axhash['wdir'], ymax=ymax, dthresh=50,  geoname=self.geoname,
+            #          add_text=False)
 
             tag = self.tag
             if not tag: tag = ''
@@ -1567,22 +1610,24 @@ class MetObs(object):
             ptools.set_hexbin('wind speed',axhash['wind speed'], ymax, tag=tag)
             hexbin(htest, ztest, axhash['hour'], cbar=cbar,sz=szhash['hour'])
             ptools.set_hexbin('hour',axhash['hour'], ymax, tag=tag)
-            #plt.tight_layout() 
+            plt.tight_layout() 
+            plt.show() 
+            yield site
             #if save:
             #    tag = self.tag
             #    if not tag: tag = ''
             #    plt.sca(ax1)
-            #    plt.savefig(tag + str(site) + '.met_distA.jpg')
+            #    plt.savefig(tag + str(site) + '.met_distA.png')
             #    if psqplot:
             #       plt.sca(ax4)
-            #       plt.savefig(tag + str(site) + '.met_distB.jpg')
+            #       plt.savefig(tag + str(site) + '.met_distB.png')
             #self.fignum +=1
             #if not quiet:
             #    plt.show()
             # clearing the axes does not
             # get rid of warning.
-            plt.show() 
-            plt.cla()
-            plt.clf()
-            plt.close()  
+            #plt.show() 
+            #plt.cla()
+            #plt.clf()
+            #plt.close()  
 
