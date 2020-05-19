@@ -194,7 +194,7 @@ def main():
        options_obs.get_ish(options,d1,d2,area)
 
     if opts.nei:
-       options_obs.get_nei(options,d1,d2,area)
+       nei = options_obs.get_nei(options,d1,d2,area)
     ##------------------------------------------------------##
     ## Get observational data
     ##------------------------------------------------------##

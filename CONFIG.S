@@ -1,12 +1,19 @@
-# getdata.py  to retrieve CEMS and/or AQS  data.
+
+# to retrieve data
+# python getdata.py  -iCONFIG.S 
 #       --aqs    to get just aqs data.
 #       --datem  This creates datem files in the subdirectories                
 #       --cems   to get just cems data. 
 #       --efiles This creates emitimes files in the subdirectories.
 #       --nei    Gets data from National Emissions Inventory for the area
+#       --ish    Gets met data.
 
-# setupruns.py to create CONTROL and SETUP files for hysplit and vmixing runs.
-        --
+# to create CONTROL and SETUP files for hysplit and vmixing runs.
+# python setupruns.py -iCONFIG.S
+#        --defaults write CONTROL.0 and SETUP.0 in outdir
+#        --vmix write CONTROL, SETUP and landuse files in subdirectories for vmixing.
+#        --nei write CONTROL, SETUP and landuse files in subdirectories for NEI data
+#              described in the neiconfig file.
 # 
 # mkscript.py to make the bash scripts to run HYSPLIT and/or vmixing.
 
@@ -16,6 +23,12 @@ tag=run1a
 # area defines box to search for cems / aqs data
 # latmin: lonmin: latmax: lonmax
 area=38.3:-77.0:38.4:-76.95
+
+# list of ORIS codes to retrieve data for.
+# if None then will retrieve data for all ORIS
+# codes found in the area
+oris = 8042:1066
+#oris = None
 
 # drange defines date range for search
 # YYYY:M:D:YYYY:M:D

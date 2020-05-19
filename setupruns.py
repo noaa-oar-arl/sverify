@@ -56,7 +56,18 @@ def main():
     action="store_true",
     dest="vmix",
     default=False,
-    help="Write CONTROL and SETUP files for vmixing",
+    help="Write CONTROL and SETUP files for vmixing, \
+          Locations are where there are AQS stations. \
+          CONTROL.suffix, suffix is V+AQS station id.",
+    )
+
+    parser.add_option(
+    "--nei",
+    action="store_true",
+    dest="nei",
+    default=False,
+    help="Write CONTROL and SETUP files for sources found in \
+          the CONFIG.nei file.",
     )
 
     parser.add_option(
@@ -115,12 +126,28 @@ def main():
     ##------------------------------------------------------##
     # Run a test
     ##------------------------------------------------------##
-
     runtest=False
     if runtest:
         print('No test available')
         rval = 1
-
+    #elif opts.nei:
+         #nei = options_obs.get_nei(options,d1,d2,area)
+    #     ns = sverify.nei.NeiSummary()
+    #     if not options.neiconfig:
+    #        print('neiconfig must be specified in the config file')
+    #        return -1
+    #     logger.info('Making CONTROL files for NEI data')  
+    #     fname = options.tdir + '/neifiles/' + options.neiconfig
+    #     neidf = ns.load(fname)
+    #     nei_runlist = sverify.svhy.nei_controls(options.tdir,
+    #                                options.hdir,
+    #                                ns.df,
+    #                                d1, d2,
+    #                                source_chunks,
+    #                                options.metfmt,
+    #                                units = options.cunits,
+    #                                tcm = tcmrun)
+ 
     ##------------------------------------------------------##
     # Create default CONTROL.0 and SETUP.0 files
     ##------------------------------------------------------##
@@ -146,10 +173,13 @@ def main():
     # CONTROL files for vmixing. 
     elif not opts.defaults:
        tcmrun=False
-       main = True
+       main = False
        vmix = opts.vmix
-       logger.info('writing control files')
-       options_run_main(options, d1, d2, source_chunks, tcmrun, main, vmix)
+       neibool = opts.nei
+       if not vmix and not neibool: main = True
+       #logger.info('writing control files')
+       options_run_main(options, d1, d2, source_chunks, 
+                        tcmrun, main, vmix, neibool)
     return 1
 
 
@@ -160,4 +190,4 @@ if __name__ == "__main__":
        log_level = logging.INFO
    else:
        log_level = logging.WARNING
-   sverify.run(main, 'mkcontrol.py', log_level = log_level)
+   sverify.run(main, 'setupruns.py', log_level = log_level)

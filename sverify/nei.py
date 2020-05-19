@@ -4,7 +4,8 @@ import time
 import sys
 import pandas as pd
 import numpy as np
-import requests
+#import requests
+import logging
 #import pytz
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -19,6 +20,9 @@ This code written at the NOAA air resources laboratory
 Python 3
 
 """
+
+logger = logging.getLogger(__name__)
+
 def df2hash(df, key, value):
     """ create a dictionary from two columns
         in a pandas dataframe. 
@@ -53,18 +57,25 @@ class NeiSummary:
     #def create(self):
 
     def load(self, fname=None):     
+         
+        df = pd.DataFrame()
         if not fname: fname = self.fname
         dtp = {'latitude':float, 'longitude':float, 'SO2_tpy':float}
         dtp['SO2_kgph'] = float
         dtp['facility'] = str
         dtp['naics'] = str
         dtp['EIS_ID'] = str
-        print('LOADING', fname)
-        time.sleep(5)
-        df = pd.read_csv(fname, sep=",", header=[0], comment=self.commentchar, dtype=dtp)
+        #print('LOADING', fname)
+        #time.sleep(5)
+        if os.path.isfile(fname): 
+            df = pd.read_csv(fname, sep=",", header=[0],
+                             comment=self.commentchar, dtype=dtp)     
+            logger.info('Loaded file ' + fname)
         # remove extra spaces from string fields
-        for val in ['EIS_ID', 'facility', 'naics']:
-            df[val] = df.apply(lambda row: row[val].strip(), axis=1) 
+            for val in ['EIS_ID', 'facility', 'naics']:
+                df[val] = df.apply(lambda row: row[val].strip(), axis=1) 
+        else:
+            logger.warning('File does not exist ' + fname)
         self.df = df
         return df
 
@@ -92,8 +103,11 @@ class NeiSummary:
                           left_on = cols_left,
                           right_on = cols_right)        
         dftemp.fillna('NOMATCH', inplace=True)
-        print('FOLLOWING FACILITIES MATCH CEMS FACILITIES')
-        print(dftemp[dftemp['Name'] != 'NOMATCH'])
+        dfcheck = dftemp[dftemp['Name'] != 'NOMATCH']
+        if not dfcheck.empty:
+            logger.info('FOLLOWING FACILITIES MATCH CEMS FACILITIES')
+            rstr = dfcheck['Name'].unique()
+            logger.info(str.join(', ', rstr))
         dftemp = dftemp[dftemp['Name'] == 'NOMATCH']
         dftemp.drop(cols, axis=1, inplace=True)
         self.df = dftemp
