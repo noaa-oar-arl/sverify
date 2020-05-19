@@ -135,7 +135,7 @@ class CemsObs(object):
 
         # read cems csv file.
         sourcesum = sv.svcems.SourceSummary(fname=self.sourcesum).sumdf  #uses default name for file.
-        print(sourcesum.columns.values)
+        #print(sourcesum.columns.values)
         sourcesum = sourcesum.groupby(['ORIS','Name','Stack height (m)',
                                        'lat','lon']).sum()
         sourcesum.reset_index(inplace=True)

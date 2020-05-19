@@ -8,7 +8,7 @@ import sverify.svhy as svhy
 from sverify.svcems import SourceSummary
 from sverify.svens import create_ensemble_controls
 
-def options_run_main(options, d1,d2, source_chunks, tcmrun):
+def options_run_main(options, d1,d2, source_chunks, tcmrun, main, vmix):
     #if 'ENS' in options.metfmt:
     #    options_deterministic(options, d1, d2, source_chunks, tcmrun)
     #else:
@@ -17,7 +17,8 @@ def options_run_main(options, d1,d2, source_chunks, tcmrun):
         runlist = create_ensemble_controls(options.tdir, options.hdir,  d1, d2, source_chunks, metfmt,
                     units = options.cunits, tcm=tcmrun, orislist=None)
     else:
-        runlist = options_deterministic(options, d1, d2, source_chunks, tcmrun) 
+        runlist = options_deterministic(options, d1, d2, source_chunks, tcmrun,
+                                        main, vmix) 
 
 def options_deterministic(options, d1, d2, source_chunks, tcmrun=False,
                           main=True, vmix=True):
@@ -26,8 +27,8 @@ def options_deterministic(options, d1, d2, source_chunks, tcmrun=False,
     #     fid.write('creating CONTROL files\n')
 
     if options.neiconfig:
-       from monet.util import nei
-       from monet.util.svhy import nei_controls
+       nei
+       from svhy import nei_controls
        ns = nei.NeiSummary()
        print('WRITING EIS CONTROLS')
        sss = SourceSummary(fname = options.tag + '.source_summary.csv')

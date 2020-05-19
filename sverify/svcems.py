@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import logging
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -12,19 +13,23 @@ from timezonefinder import TimezoneFinder
 #from shapely.geometry import Point
 #import geopandas as gpd
 import pandas as pd
+pd.options.mode.chained_assignment = None
 import warnings
 
 # SO2 modules
 from sverify.svdir import date2dir
 
 # MONETIO MODULES
-from monetio.obs import cems_api
+import monetio.obs
+#from  monetio.obs import cems_api
+import monetio.obs.cems_api as cems_api
 from monetio.obs import cems_mod
 import monetio.obs.obs_util as obs_util
 
 from utilhysplit import emitimes
 
 
+logger = logging.getLogger(__name__)
 # from monet.obs.epa_util import convert_epa_unit
 
 """
@@ -203,7 +208,7 @@ class CEMScsv:
         return sources 
 
     def make_csv(self, df):
-        print("CREATE CSV FILE ", self.tdir, self.cname)
+        logger.info("CREATE CSV FILE " +  self.tdir +  self.cname)
         new = [self.timecol]
         df.fillna(0, inplace=True)
         for hd in df.columns:
@@ -613,7 +618,7 @@ class SEmissions(object):
             self.cems.load(efile, verbose=verbose)
         else:
             data = self.cems.add_data(
-                [self.d1, self.d2], alist, area=self.byarea, verbose=True
+                [self.d1, self.d2], alist, area=self.byarea, verbose=verbose
             )
         if data.empty:
             print("NO SO2 data found. Exiting program")
@@ -640,7 +645,7 @@ class SEmissions(object):
 
         def loc2utc(local, oris, tzhash):
             if isinstance(local, str):
-                print("NOT DATE", local)
+                #logger.debug("NOT DATE " + local)
                 utc = local
             else:
                 try:
@@ -654,14 +659,15 @@ class SEmissions(object):
 
         # all these copy statements are to avoid the warning - a value is trying
         # to be set ona copy of a dataframe.
-        print("DATA CHECK", self.df[0:10])
+        #logger.debug("DATA CHECK")
+        #logger.debug(self.df[0:10])
         self.df["time"] = self.df.apply(
             lambda row: loc2utc(row["time local"], row["oris"], tzhash), axis=1
         )
         print(self.df.columns.values)
         temp = self.df[self.df.time == "None"]
         if not temp.empty:
-            print("TEMP with None time\n", temp[0:20])
+            #logger.debug("TEMP with None time\n", temp[0:20])
             self.df = self.df[self.df.time != "None"]
 
         # get the source summary for the dates of interest
@@ -714,7 +720,7 @@ class SEmissions(object):
     #        print("DROPPING")
     #    return rval
 #
-    def get_sources(self, stype="so2_lbs", unit=True, verbose=True):
+    def get_sources(self, stype="so2_lbs", unit=True, verbose=False):
         """
         Returns a dataframe with rows indexed by date.
         column has info about lat, lon,
@@ -842,7 +848,7 @@ class SEmissions(object):
         # unit in csv file is kg
         #print("CREATE CSV FILE ")
         self.make_csv(df.copy())
-        print("CREATE EMITIMES in SVCEMS ", tdir, ' Use day chunks ' +  str(schunks/24))
+        logger.info("CREATE EMITIMES in SVCEMS " +  tdir + ' Use day chunks ' +  str(schunks/24))
         # placeholder. Will later add routine to get heat for plume rise
         # calculation.
         dfheat = df.copy() * 0 + heat
@@ -1109,7 +1115,6 @@ class SEmissions(object):
     def nowarning_plot(self, save=True, quiet=True, maxfig=10):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            print('PLOTTING CEMS')
             self.plot(save, quiet, maxfig)
 
 

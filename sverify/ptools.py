@@ -37,12 +37,12 @@ def create_map(fignum, lonlist=None):
     gl = ax.gridlines(draw_labels=True, linewidth=2, color="gray")
     gl.xlabel_style={'size': 15, 'color': 'gray', 'weight': 'bold'}
     gl.ylabel_style={'size': 15, 'color': 'gray', 'weight': 'bold'}
-    gl.ylabels_right = False
-    gl.xlabels_top = False
-    gl.xlocator = mticker.MaxNLocator(nbins=4, steps=[1,2,5,10,20,25],
-                                      min_n_tickes=3)
-    gl.ylocator = mticker.MaxNLocator(nbins=6, steps=[1,2,5,10,20,25],
-                                      min_n_tickes=3)
+    #gl.ylabels_right = False
+    #gl.xlabels_top = False
+    gl.xlocator = mticker.MaxNLocator(nbins=4, steps=[1,2,5,10],
+                                      min_n_ticks=3)
+    gl.ylocator = mticker.MaxNLocator(nbins=6, steps=[1,2,5,10],
+                                      min_n_ticks=3)
     gl.xformatter = LONGITUDE_FORMATTER
     gl.yformatter = LATITUDE_FORMATTER
     states = cfeature.NaturalEarthFeature(
@@ -90,7 +90,7 @@ def set_date_ticksD(ax):
     ax.set_xlim(left = ldate, right=rdate)
     start, end = ax.get_xlim()
     ax.tick_params(axis='both', which='major', labelsize=20)
-    print('START END', start, end)
+    #print('START END', start, end)
 
 def set_date_ticksB(ax):
     mloc=mdates.MonthLocator()

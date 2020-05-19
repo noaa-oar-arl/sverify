@@ -10,18 +10,21 @@ import datetime
 import sys
 import seaborn as sns
 import warnings
+import logging
 
 #MONETIO modules
 from monetio.obs import aqs as aqs_mod
 from monetio.obs import airnow
 from monetio.obs import obs_util
-from utilhysplit import datem
+from utilhysplit.evaluation import datem
 
 #MONET MODULES in UTILHYSPLIT
-from utilhysplit import statmain
+from utilhysplit.evaluation import statmain
 
 #MONET MODULES THAT should be SO2 modules
 from sverify.svdir import date2dir
+
+logger = logging.getLogger(__name__)
 
 """
 FUNCTIONS
@@ -95,6 +98,7 @@ def read_csv(name, hdrs=[0]):
 def generate_obs(siteidlist, obsfile):
     """
     yields a time series of measurements for each site in the siteidlist.
+    similar to the generate_ts method in SObs class.
     """
     #obsfile = self.obsfile.replace('info_','')
     str1 = obsfile.split('.')
@@ -103,7 +107,7 @@ def generate_obs(siteidlist, obsfile):
     area=''
     obs = SObs([dt1, dt2], area)
     if not os.path.isfile(obsfile):
-       print(obsfile + ' does not exist')
+       logger.warning(obsfile + ' does not exist')
     odf = read_csv(obsfile, hdrs=[0])
     #print('HERE', odf[0:1])
     #print(odf.columns)
@@ -172,8 +176,10 @@ class SObs(object):
         self.siteidlist = []
 
     def find_csv(self):
-         # checks to see if a downloaded csv file in the correct date range
-         # exists.
+         """
+          checks to see if a downloaded csv file in the correct date range
+          exists.
+         """
          names = []
          names =  find_obs_files(self.tdir, self.d1, self.d2, tag=None)
          # if it exists then
@@ -207,7 +213,6 @@ class SObs(object):
         Returns
         siteid (int), pandas time series of obs, pandas time series of mdl.
         """
- 
         # get list of siteids.
         if not sidlist:
             sra = self.obs["siteid"].unique()
@@ -223,19 +228,29 @@ class SObs(object):
             ms = get_tseries(self.obs, sid, var="mdl", svar="siteid")
             yield sid, ts, ms
 
-    def autocorr(self):
-        """
-        autocorrelation of measurements
-        """
+    def calc_autocorr(self):
         for sid, ts, ms in self.generate_ts(sidlist=None):
             alist = []
             nlist = np.arange(0,48)
             for nnn in nlist:
                 alist.append(ts.autocorr(lag=nnn))
+            yield sid, nlist, alist
+
+    def autocorr(self):
+        """
+        autocorrelation of measurements
+        """
+        for sid, nlist, alist in self.calc_autocorr():
+        #for sid, ts, ms in self.generate_ts(sidlist=None):
+        #    alist = []
+        #    nlist = np.arange(0,48)
+        #    for nnn in nlist:
+        #        alist.append(ts.autocorr(lag=nnn))
             plt.plot(nlist, alist, 'k.')
             plt.title(str(sid))
             plt.savefig(str(sid) + 'obs.autocorr.png')
             plt.show()    
+
 
     def get_peaks(self, sidlist=None, pval=[0.95,1], plotfigs=True):
         """
@@ -245,6 +260,7 @@ class SObs(object):
 
         Can be used to identify peaks or valleys.
         """
+      
         for sid, ts, ms in self.generate_ts(sidlist=sidlist):
             # get minimum detectable level
             mdl = np.max(ms.values)
@@ -259,6 +275,7 @@ class SObs(object):
             tsp = ts[ts >= valA]
             tsp = tsp[tsp <= valB]
             # plot peaks as well as CDF's.
+            sns.set()
             if plotfigs:
                 fig = plt.figure(1)
                 ax1 = fig.add_subplot(1,1,1)
@@ -274,6 +291,7 @@ class SObs(object):
                 statmain.plot_cdf(cx, cy, ax) 
                 ax.plot(valA, pval[0], 'b.')
                 ax.plot(valB, pval[1], 'b.')
+                plt.tight_layout()
                 plt.show()
             # sid is site number
             # tsp is a time series of peaks
@@ -301,12 +319,17 @@ class SObs(object):
     #        plt.plot(ms.index.tolist(), ms, '-b')
     #        plt.title(sid)
     #        plt.show() 
+    def nowarningplot(self, save=True, quiet=True,sra=None, maxfig=10 ):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.plot(save=save, quiet=quiet,sra=sra, maxfig=maxfig )
 
-    def plot(self, save=True, quiet=True, maxfig=10 ):
+    def plot(self, save=True, quiet=True,sra=None, maxfig=10 ):
         """plot time series of observations"""
-        sra = self.obs["siteid"].unique()
-        print("PLOT OBSERVATION SITES")
-        print(sra)
+        if not sra:
+            sra = self.obs["siteid"].unique()
+        #print("PLOT OBSERVATION SITES")
+        #print(sra)
         sns.set()
         sns.set_style('whitegrid')
         dist = []
@@ -339,18 +362,12 @@ class SObs(object):
             else:
                 if not quiet:
                     plt.show()
-                plt.close("all")
+                #plt.close("all")
                 self.fignum = 0
             # if quiet: plt.close('all')
-            print("plotting obs figure " + str(self.fignum))
+            logger.info("plotting obs figure " + str(self.fignum))
             self.fignum += 1
 
-        # sns.distplot(dist, kde=False)
-        # plt.show()
-        # sns.distplot(np.array(dist)/2.6178, kde=False, hist_kws={'log':True})
-        # plt.show()
-        # sns.distplot(np.array(dist)/2.6178, kde=False, norm_hist=True, hist_kws={'log':False, 'cumulative':True})
-        # plt.show()
 
     def save(self, tdir="./", name="obs.csv"):
         fname = tdir + name
@@ -389,6 +406,8 @@ class SObs(object):
         units="UG/M3",
     ):
         """
+        Find observations from AQS within the
+        specified date range and area.
         Parameters
         -----------
         verbose   : boolean
@@ -402,21 +421,21 @@ class SObs(object):
            runtest
         elif self.pload:
             self.obs = read_csv(tdir + self.csvfile, hdrs=[0])
-            print("Loaded csv file file " + tdir + self.csvfile)
+            logger.info("Loaded csv file file " + tdir + self.csvfile)
             mload = True
             try:
                 met_obs = read_csv(tdir + "met" + self.csvfile, hdrs=[0, 1])
             except BaseException:
                 mload = False
-                print("did not load metobs from file")
+                logger.info("did not load metobs from file")
         elif not self.pload:
-            print("LOADING from EPA site. Please wait\n")
+            logger.info("LOADING from EPA site. Please wait\n")
             if getairnow:
                 #aq = airnow.AirNow()
-                print('AIRNOW')
+                logger.info('AIRNOW')
                 self.obs = airnow.add_data([self.d1, self.d2], download=True)
             else:
-                print('AQS')
+                logger.info('AQS')
                 aq = aqs_mod.AQS()
                 self.obs = aq.add_data(
                     [self.d1, self.d2],
@@ -425,50 +444,46 @@ class SObs(object):
                 )
             # aq.add_data([self.d1, self.d2], param=['SO2','WIND','TEMP'], download=False)
             #self.obs = aq.df.copy()
-        print("HEADERS in OBS: ", self.obs.columns.values)
+        #logger.debug("HEADERS in OBS: ", self.obs.columns.values)
         if self.obs.empty: print('Obs empty ')
         # filter by area.
         if area:
             self.obs = obs_util.latlonfilter(
                 self.obs, (area[0], area[1]), (area[2], area[3])
             )
-        if self.obs.empty: print('Obs empty after latlon filter')
+        if self.obs.empty: logger.warning('Obs empty after latlon filter')
         # filter by time
         rt = datetime.timedelta(hours=72)
         self.obs = obs_util.timefilter(self.obs, [self.d1, self.d2 + rt])
         
 
-        if self.obs.empty: print('Obs empty after time filter')
+        if self.obs.empty: 
+           logger.warning('Obs empty after time filter')
+
         # if the data was not loaded from a file then save all the data here.
         if not self.pload:
             self.save(tdir, self.csvfile)
-            print("saving to file ", tdir + "met" + self.csvfile)
+            logger.info("saving to file " + tdir + "met" + self.csvfile)
 
+        # create dataframe with all the data
         self.dfall = self.obs.copy()
+
         # now create a dataframe with data for each site.
         # get rid of the meteorological (and other) variables in the file.
         self.obs = self.obs[self.obs["variable"] == "SO2"]
         if self.obs.empty: print('No So2 in Obs')
+
         # added back in 8/12/2019
+        # print summary csv file
         print_info(self.obs, tdir+ "/info_" + self.csvfile)
         if verbose:
             obs_util.summarize(self.obs)
-        # get rid of the meteorological variables in the file.
-        #self.obs = self.obs[self.obs["variable"] == "SO2"]
+
+        # No longer convert but keep in ppm.
         # convert units of SO2
-        units = units.upper()
+        #units = units.upper()
         #if units == "UG/M3":
         #    self.obs = convert_epa_unit(self.obs, obscolumn="obs", unit=units)
-
-    #def get_met_data(self):
-    #    """
-    #    Returns a MetObs object.
-    #    """
-    #    print("Making metobs from obs")
-    #    meto = MetObs()
-    #    meto.from_obs(self.dfall)
-    #    return meto
-
 
 
     def bysiteid(self, siteidlist):
@@ -486,8 +501,8 @@ class SObs(object):
         tdir: string
               top level directory for output.
         """
-        print("WRITING MEAS Datem FILE ", edate)
-        print(self.obs["units"].unique())
+        logger.info("WRITING Datem FILE " + edate.strftime("%Y-%m-%d"))
+        #print(self.obs["units"].unique())
         d1 = edate
         done = False
         iii = 0
@@ -499,10 +514,9 @@ class SObs(object):
             d3 = d1 + datetime.timedelta(hours=oe - 1)
             odir = date2dir(tdir, d1, dhour=oc, chkdir=True)
             dname = odir + "datem.txt"
-            print(dname)
             datem.write_datem(
                 self.obs, sitename="siteid", drange=[d1, d3], dname=dname,
-                fillhours=1, verbose=True
+                fillhours=1, verbose=False
             )
             d1 = d2 + datetime.timedelta(hours=1)
             iii += 1
@@ -510,7 +524,7 @@ class SObs(object):
                 done = True
             if iii > maxiii:
                 done = True
-                print("WARNING: obs2datem, loop exceeded maxiii")
+                logger.warning("WARNING: obs2datem, loop exceeded maxiii")
 
     #def old_obs2datem(self):
     #    """

@@ -1,3 +1,4 @@
+import logging
 import matplotlib.pyplot as plt
 from sverify.svcems import SEmissions
 from sverify.ptools import create_map
@@ -14,10 +15,11 @@ from sverify.svens import ensemble_emitimes
 #        emit_area=options.emit_area,
 #    )
 
+logger = logging.getLogger(__name__)
 
-def get_ef(options, d1, d2, area, source_chunks, logfile):
-    with open(logfile, 'a') as fid:
-     fid.write('Running cems=True options\n')
+def get_ef(options, d1, d2, area, source_chunks, verbose=False):
+    #with open(logfile, 'a') as fid:
+    logger.info('Getting CEMS data')
     #print(options.orislist[0])
     if options.orislist[0] != "None":
         alist = options.orislist
@@ -36,19 +38,20 @@ def get_ef(options, d1, d2, area, source_chunks, logfile):
         )
      # get emissions data
      # create source_summary.csv file.
-    ef.find()
+    ef.find(verbose=verbose)
     return ef
 
 
-def options_cems_main(options, d1, d2, area, source_chunks, logfile,
-                      ensemble=False):
-    ef = get_ef(options, d1, d2, area, source_chunks, logfile)
+def options_cems_main(options, d1, d2, area, source_chunks,
+                      ensemble=False, efiles=False, verbose=False):
+    ef = get_ef(options, d1, d2, area, source_chunks, verbose=verbose)
 
     rfignum = ef.fignum
-    if ensemble:
+    if ensemble and efiles:
         ensemble_emitimes(options, options.metfmt, ef, source_chunks)
-    else: 
+    elif efiles: 
         # create emittimes files
+        logger.info('Creating emit times files')
         ef.create_emitimes(
             ef.d1,
             schunks=source_chunks,
@@ -59,6 +62,7 @@ def options_cems_main(options, d1, d2, area, source_chunks, logfile,
         )
         #return ef, rfignum
     # create plots of emissions
+    logger.info('Creating plots of emissions')
     if options.quiet == 0:
         ef.nowarning_plot(save=True, quiet=False)
     else:
@@ -70,7 +74,7 @@ def options_cems_main(options, d1, d2, area, source_chunks, logfile,
         plt.close("all")
         rfignum = 1
     if not options.obs:
-        print("map fig number  " + str(rfignum))
+        #logger.debug("map fig number  " + str(rfignum))
         mapfig = plt.figure(rfignum)
         figmap, axmap, gl = create_map(rfignum)
         ef.map(axmap)

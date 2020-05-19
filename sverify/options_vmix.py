@@ -108,9 +108,10 @@ def options_vmix_main(options, d1, d2, area, source_chunks,
           nei.load(options.tdir + 'neifiles/' + options.neiconfig)
           vmet.add_nei_data(nei.df)
 
-      cemstest, cemsdf = options_vmix_cems(options.tag)
-      if cemstest: 
-         vmet.add_cems(cemsdf)
+      # TO DO: FIX THIS
+      #cemstest, cemsdf = options_vmix_cems(options.tag)
+      #if cemstest: 
+      #   vmet.add_cems(cemsdf)
          #vmet.conditionalA()         
       #sys.exit()
       vmet.conditional(quiet=quiet, save=True, varlist=['SO2']) 
@@ -152,7 +153,7 @@ def options_vmix_met(options, vmet, meto, logfile):
            md.plotscatter(ax)
            save_str = str(md.stn[0]) + '_' + str(md.stn[1])
            plt.title(save_str)
-           plt.savefig(save_str + '.jpg')
+           plt.savefig(save_str + '.png')
            fignum+=1
            if str(md.stn[1])=='WDIR' or str(md.stn[1])=='WS':
               fig = plt.figure(fignum)
@@ -161,7 +162,7 @@ def options_vmix_met(options, vmet, meto, logfile):
               if md.stn[1] == 'WDIR': wdir=True
               md.plotdiff(ax, wdir=wdir)
               save_str = 'TS_' + str(md.stn[0]) + '_' + str(md.stn[1])
-              plt.savefig(save_str + '.jpg')
+              plt.savefig(save_str + '.png')
               fignum+=1
        if options.quiet < 2: 
           plt.show()

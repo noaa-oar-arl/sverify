@@ -78,7 +78,7 @@ def main(options):
     svp = SVparams()
     svp.make_d1d2(options.drange)
     svp.make_area(options.bounds)
-    svp.add_logfile(options.tag)
+    #svp.add_logfile(options.tag)
     svp.make_source_chunks(options.chunks)
     svp.check_ensemble(options.metfmt)
     return svp

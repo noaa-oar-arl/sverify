@@ -15,7 +15,7 @@ from utilhysplit.hcontrol import ConcGrid
 from utilhysplit.hcontrol import NameList
 from utilhysplit.hcontrol import writelanduse
 from utilhysplit.metfiles import MetFiles
-import utilhysplit.datem  as datem
+import utilhysplit.evaluation.datem  as datem
 from sverify.svdir import dirtree
 from sverify.svdir import date2dir
 from sverify.svdir import dir2date
@@ -294,7 +294,7 @@ def read_vmix(tdirpath, sdate, edate, timechunks, sid=None, verbose=False):
     for dirpath in dtree:
         for (d1, dirnames, filenames) in walk(dirpath):
              for fl in filenames:
-                 print('vmixing ', d1, fl)
+                 #print('vmixing ', d1, fl)
                  test=True
                  if 'STABILITY' in fl:
                      if not sid or str(sid) in fl:

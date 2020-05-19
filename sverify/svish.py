@@ -8,12 +8,12 @@ import datetime
 import sys
 import monet
 #from  monet.obs import *
-from monet.obs import ish
+from monetio.obs import ish
 #import monet.obs.obs_util as obs_util
 import matplotlib.pyplot as plt
 import seaborn as sns
 #from monet import MONET
-from svobs import find_obs_files
+from sverify.svobs import find_obs_files
 
 """
 

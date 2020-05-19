@@ -502,7 +502,7 @@ class MetObs(object):
          this is needed to plot direction of power plants
         """
         self.geoname = name
-        print('SETTING geoname', self.geoname)
+        #print('SETTING geoname', self.geoname)
 
     def add_model_all(self, mdf, verbose=True):
         # This adds the model data to the dataframe.
@@ -518,7 +518,7 @@ class MetObs(object):
         # and produce time series from it as needed to be merged.
 
         self.model_list = list(mdf.columns.values)
-        print('adding model list', self.model_list)
+        #print('adding model list', self.model_list)
         if 'time' in self.model_list: self.model_list.remove('time')
         if 'siteid' in self.model_list: self.model_list.remove('siteid')
         self.model_columns = mdf.columns.values
@@ -535,9 +535,9 @@ class MetObs(object):
                              right_on =modelcol 
                              )
             self.df = newdf
-            print(newdf[0:10])
-            print(self.df.columns.values)
-            print(self.model_list)
+            #print(newdf[0:10])
+            #print(self.df.columns.values)
+            #print(self.model_list)
         self.isempty()
         return  self.df
 
@@ -561,8 +561,8 @@ class MetObs(object):
                          right_on =modelcol 
                          )
         newdf = newdf.fillna(0)
-        print('NEWDF', newdf.columns.values)
-        print(newdf[0:10])
+        #print('NEWDF', newdf.columns.values)
+        #print(newdf[0:10])
         self.df = newdf
         self.conditional(varlist=['SO2', 'model']) 
         
@@ -572,7 +572,7 @@ class MetObs(object):
         """
         adds the following colummns to the dataframe 
         """
-       
+        verbose=False 
         grouplist = ['time']
         if verbose:
             print('ADDING CEMS ')
@@ -613,7 +613,7 @@ class MetObs(object):
     def from_obs(self, obs):
         # Currenlty this overwrites anything that used to be in self.df
         # only keep rows (sites) which have Met data.
-        print("Making metobs from obs")
+        #print("Making metobs from obs")
         self.df =svobs.obs_pivot(obs)  # pivot table
         self.columns_original = self.df.columns.values
         self.rename_columns()
@@ -636,8 +636,8 @@ class MetObs(object):
         for val in ['psqnum', 'hour']:
             if val in df.columns.values:
                 df = df.drop([val], axis=1)
-        print(self.columns_original)
-        print(df.columns.values)
+        #print(self.columns_original)
+        #print(df.columns.values)
         try:
             df.columns = self.columns_original
         except:
@@ -701,9 +701,9 @@ class MetObs(object):
         model = model[model.lev == level]
         cols = ['siteid','time','latitude','longitude','obs','source','pollnum']
         cols.extend(['stype','lev','model'])
-        print(model.columns.values)
-        print('----')
-        print(cols)
+        #print(model.columns.values)
+        #print('----')
+        #print(cols)
         model.columns = cols
         
         metdata = self.df[self.df.siteid == sid]
@@ -785,7 +785,7 @@ class MetObs(object):
                 cols=[]
                 for name, oris_ts in self.add_model_ts(site, tp='ORIS',
                                                         levlist=lev):
-                    print(type(oris_ts))
+                    #print(type(oris_ts))
                     mcdf,y = statmain.cdf(oris_ts)
                     ax1.step(mcdf, y, '-r')
                     ktest.append(statmain.kstest_answer(so2, oris_ts))
@@ -831,8 +831,8 @@ class MetObs(object):
                        df = pd.concat([df, oris_ts], axis=1) 
                     jjj+=1
                     cols.append(name)
-                print(df[0:5])
-                print(cols)
+                #print(df[0:5])
+                #print(cols)
                 df.columns = cols
                 df2 = df.copy()
                 df['mean'] = df.mean(axis=1)
@@ -840,7 +840,7 @@ class MetObs(object):
                 df['min'] = df.min(axis=1) 
                 df2 = df2.T
                 vals = (df2[df2 > thresh].count()) /len(cols)
-                print('PROBS', len(cols), vals)
+                #print('PROBS', len(cols), vals)
                 #ax2.plot(vals, clrs[iii], linewidth=1) 
                 yval = df['mean'].values 
                 xval = df.index.tolist()
@@ -896,7 +896,7 @@ class MetObs(object):
             df = df[df['WS'] >= 2]
             df = df.set_index('time')
             so2 = df['SO2']
-            print(df.columns.values)
+            #print(df.columns.values)
             mval = 'MixHgt'
             wdir = df[mval]
             #ax2.plot(wdir, 'b.', markersize=4)
@@ -945,7 +945,7 @@ class MetObs(object):
             so2 = df['SO2']
             vpi = so2==-9
             so2[vpi] = float('Nan') 
-            print(df.columns.values)
+            #print(df.columns.values)
             mval = 'MixHgt'
             wdir = df[mval]
             #ax2.plot(wdir, 'b.', markersize=4)
@@ -968,8 +968,8 @@ class MetObs(object):
                        df = pd.concat([df, oris_ts], axis=1) 
                     jjj+=1
                     cols.append(name)
-                print(df[0:5])
-                print(cols)
+                #print(df[0:5])
+                #print(cols)
                 df.columns = cols
                 df2 = df.copy()
                 df['mean'] = df.mean(axis=1)
@@ -1030,14 +1030,14 @@ class MetObs(object):
         wlist = {}
 
         df = self.df.copy()
-        print(df[0:10])
+        #print(df[0:10])
         #df = df[df['hour'] > 12]
         #df = df[df['hour'] > 21]
         #df = df[df['WS'] >=  2 ]
         # this would result in looking only at times they both had
         # concentrations greater than this.
         #df = df[df['SO2'] >=  2.5 ]
-        print(df[0:10])
+        #print(df[0:10])
         df = pd.pivot_table(df, values=['WDIR'], columns=['siteid'],
                             index='time')
         df.dropna(axis=0, inplace=True)
@@ -1114,7 +1114,7 @@ class MetObs(object):
         sns.set()
         sns.set_style('whitegrid')
         slist = self.get_sites()
-        print('SLIST', slist)
+        #print('SLIST', slist)
         #self.date2hour()
         for site in slist:
             fig = plt.figure(self.fignum)
@@ -1169,7 +1169,7 @@ class MetObs(object):
         # will plot levels 1,2,3 seperately.
         # [[1,2],[3]]
         # will plot levels 1&2 averaged together and then 3 separately. 
-        print('PLOT TS')
+        #print('PLOT TS')
         if self.df.empty: return -1
         sns.set()
         sns.set_style('whitegrid')
@@ -1424,7 +1424,7 @@ class MetObs(object):
         distance = orisinfo[1]
         roll=12
         thresh = 50 * roll
-        print('dfroll--------')
+        #print('dfroll--------')
         # want to take into account emission during the previous 12
         # hours
         df['roll'] = df[oris].rolling(roll).sum()

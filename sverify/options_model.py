@@ -24,24 +24,27 @@ def options_model_main(options, d1, d2, vmet,
     print('IN OPTIONS MODEL MAIN', model_list)
     #vmet.plot_all_winds()
     #sys.exit()
-    if options.model_list == ['sref']:
-        model_list = create_member_list_srefA()
-    else:
-        model_list = get_model_list(1)
+    #if options.model_list == ['sref']:
+    #    model_list = create_member_list_srefA()
+    #elif not model_list:
+    #    model_list = get_model_list(5)
+    print(options.tag + '.source_summary.csv')
     sss = SourceSummary(fname = options.tag + '.source_summary.csv')
+
     orislist = sss.check_oris(10)
     #orislist=[2103]
     for model in model_list:
         print(model)
         tdir = path.join(options.tdir + model)
         print('TDIR', tdir)
-        options_model_sub(vmet, tdir, orislist, [d1,d2], model)
+        # this adds the model data into a dictionary in vmet.
+        vmet = options_model_sub(vmet, tdir, orislist, [d1,d2], model)
     # used for plotting the time series.
     #if options.time_series:
     #    options_model_ts(options, d1, d2, vmet, logfile, model_list=model_list)
     #if options.prob_plots:
     #    options_model_prob(options, d1, d2, vmet, logfile, model_list=model_list)
-    #return vmet
+    return vmet
 
 
 def options_model_ts(options, d1, d2, vmet, logfile, model_list=None):
@@ -67,12 +70,14 @@ def options_model_ts(options, d1, d2, vmet, logfile, model_list=None):
     #plt.show()
 
 def get_model_list(number):
-    model_list = []
+    model_list = ['']
     if number == 1: 
         model_list = ['B4nam12', 'B17nam12','Bnam12','F2hrrr','B4wrf']
     elif number == 2: 
         # uses Beljaar holstead for the low plume rise nam
         model_list = ['B17nam12', 'B4nam12','Enam12','F2hrrr','B4wrf']
+    else:
+        model_list = ['']
     return model_list
 
 
@@ -94,16 +99,17 @@ def options_model_prob(options, d1, d2, vmet,
    vmet.plot_prob(levlist=levlist) 
    plt.show()
 
-
-
 def options_model_sub(vmet, tdir, orislist, daterange, name):
    """
+   Add model objects to the vmet class.
    INPUTS
    vmet : MetObs object
    tdir : string. Directory where datem output is.
    orislist : list of ints
    daterange :
    name : name to write file to.
+   OUTPUTS
+   vmet
    """
 
    print('ADDING model ', name)
@@ -123,3 +129,4 @@ def options_model_sub(vmet, tdir, orislist, daterange, name):
    else:
        print('VMET IS EMPTY')
    return vmet
+
