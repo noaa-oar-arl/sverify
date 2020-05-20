@@ -79,11 +79,11 @@ def main():
     )
 
     parser.add_option(
-    "--verbose",
-    action="store_true",
+    "--quiet",
+    action="store_false",
     dest="verbose",
-    default=False,
-    help="Print messages" 
+    default=True,
+    help="Don't print  messages" 
     )
 
     (opts, args) = parser.parse_args()
