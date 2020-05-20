@@ -1,6 +1,7 @@
 import os
-from utilhysplit.hcontrol import NameList
 import sys
+from utilhysplit.hcontrol import NameList
+import logging
 
 # import cartopy.crs as ccrs
 # import cartopy.feature as cfeature

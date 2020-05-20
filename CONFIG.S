@@ -15,7 +15,13 @@
 #        --nei write CONTROL, SETUP and landuse files in subdirectories for NEI data
 #              described in the neiconfig file.
 # 
-# mkscript.py to make the bash scripts to run HYSPLIT and/or vmixing.
+# to make the bash scripts to run HYSPLIT and/or vmixing.
+# python mkscript.py -iCONFIG.S
+#        --run  create CONTROL and SETUP files for CEMS runs
+#        --nei --run  create CONTROL and SETUP files for NEI runs
+#        --vmix create CONTROL and SETUP files for vmixing runs
+#        --datem  create script to run c2datem on completed runs 
+#        --nei --datem  create script to run c2datem on completed NEI runs 
 
 # Tag which will be used for naming output files.
 tag=run1a

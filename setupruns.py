@@ -130,24 +130,6 @@ def main():
     if runtest:
         print('No test available')
         rval = 1
-    #elif opts.nei:
-         #nei = options_obs.get_nei(options,d1,d2,area)
-    #     ns = sverify.nei.NeiSummary()
-    #     if not options.neiconfig:
-    #        print('neiconfig must be specified in the config file')
-    #        return -1
-    #     logger.info('Making CONTROL files for NEI data')  
-    #     fname = options.tdir + '/neifiles/' + options.neiconfig
-    #     neidf = ns.load(fname)
-    #     nei_runlist = sverify.svhy.nei_controls(options.tdir,
-    #                                options.hdir,
-    #                                ns.df,
-    #                                d1, d2,
-    #                                source_chunks,
-    #                                options.metfmt,
-    #                                units = options.cunits,
-    #                                tcm = tcmrun)
- 
     ##------------------------------------------------------##
     # Create default CONTROL.0 and SETUP.0 files
     ##------------------------------------------------------##

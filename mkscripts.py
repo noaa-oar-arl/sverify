@@ -6,6 +6,7 @@ import logging
 #import numpy as np
 #import matplotlib.pyplot as plt
 #import os
+import sverify
 from sverify import svens
 from sverify import options_process
 from sverify import svconfig
@@ -86,8 +87,7 @@ def main():
         action="store_true",
         dest="ens",
         default=False,
-        help="create bash scripts to run datem or HYSPLIT for the data\
-              found in the confignei file",
+        help="create bash scripts to ensemble. not completely working."
     )
     parser.add_option(
     "--debug",
@@ -106,8 +106,17 @@ def main():
     )
 
 
-
     (opts, args) = parser.parse_args()
+    if opts.check_cdump:
+       wstr = '-c option set ' + str(opts.check_cdump)
+       wstr += 'lines to run HYSPLIT when cdump files exist will be'
+       wstr += 'commented out'
+
+    if not opts.check_cdump:
+       wstr = '-c option not set ' + str(opts.check_cdump)
+       wstr += 'cdump files may be overwritten if script is run'
+
+    logger.warning(wstr)
 
     if opts.print_help:
         print("-------------------------------------------------------------")
@@ -145,7 +154,7 @@ def main():
     if opts.nei:
         from sverify import nei
         ns = nei.NeiSummary()
-        print(options.tdir, options.neiconfig)
+        #print(options.tdir, options.neiconfig)
         neidf = ns.load(fname = options.tdir + '/neifiles/' + options.neiconfig) 
         #ns.remove_cems(sss.sumdf)
         #ns.print(fname = options.tdir + '/neifiles/CONFIG.NEWNEI')
@@ -153,42 +162,53 @@ def main():
         nei_runlist = create_nei_runlist(options.tdir, options.hdir, neidf,d1, d2,
                                          source_chunks)
         if opts.run:
-            logger.info('Making bash script for NEI HYSPLIT runs ')
-            rs = RunScript(options.tag + "_nei.sh", nei_runlist, options.tdir,
+            fname = options.tag + "nei.sh"
+            logger.info('Making bash script for NEI HYSPLIT runs ' + fname)
+            rs = RunScript(fname, nei_runlist, options.tdir,
                             check=opts.check_cdump)
         if opts.datem:
-            logger.info('Making DATEM script for NEI sources ')
+            fname = options.tag + "_nei_datem.sh"
+            logger.info('Making DATEM script for NEI sources :' + fname)
             rs = DatemScript(
-                  options.tag + "_nei_datem.sh", nei_runlist, options.tdir, options.cunits, poll=1
+                  fname , nei_runlist, options.tdir, options.cunits, poll=1
                   )
 
     if opts.vmix and not opts.ens:
-        logger.info('writing script to run vmix ')
         runlist = create_vmix_controls(options.vdir, options.hdir, d1, d2,
                                        source_chunks, metfmt='None', write=False)
-        rs = VmixScript(options.tag + '.vmix.sh', runlist, options.tdir)
+        fname = options.tag + '.vmix.sh'
+        logger.info('writing script to run vmix ' + fname)
+        rs = VmixScript(fname, runlist, options.tdir)
     elif opts.vmix and opts.ens:
+        logger.warning('Ensemble option set ')
+        logger.info('writing script to run ensemble vmix ')
         runlist = create_ensemble_vmix_controls(options.tdir, options.hdir, d1, d2,
                                        source_chunks, options.metfmt)
         svens.create_ensemble_vmix(options, d1, d2, source_chunks)
 
     # create ensemble scripts for running.
     if opts.run and not opts.nei and opts.ens:
+        logger.warning('Ensemble option set ')
         svens.create_ensemble_scripts(options, d1, d2, source_chunks,
                                        opts.check_cdump)
 
     if opts.datem and not opts.nei and opts.ens:
+        logger.warning('Ensemble option set ')
         svens.create_ensemble_datem_scripts(options, d1, d2, source_chunks)
 
     if opts.run and not opts.nei and not opts.ens:
         runlist = create_runlist(options.tdir, options.hdir, d1, d2, source_chunks)
-        print('writing script to run HYSPLIT for CEMS sources')
-        rs = RunScript(options.tag + ".sh", runlist, options.tdir, check=opts.check_cdump)
+        fname = options.tag + ".sh"
+        logger.info('writing script to run HYSPLIT for CEMS sources: ' + fname)
+        rs = RunScript(fname, runlist, options.tdir, check=opts.check_cdump)
 
 
     if opts.datem and not opts.nei and not opts.ens:
         runlist = create_runlist(options.tdir, options.hdir, d1, d2, source_chunks)
-        print('writing scripts to create datemfiles for CEMS hysplit runs')
+        logger.info('writing scripts to create datemfiles for CEMS hysplit runs')
+        logger.info('p1datem_' + options.tag + ".sh")
+        logger.info('p2datem_' + options.tag + ".sh")
+        logger.info('p3datem_' + options.tag + ".sh")
         rs = DatemScript(
             "p1datem_" + options.tag + ".sh", runlist, options.tdir, options.cunits, poll=1
         )

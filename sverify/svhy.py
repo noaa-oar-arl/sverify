@@ -231,9 +231,9 @@ def create_runlist(tdirpath, hdirpath, sdate, edate, timechunks):
     ##determines meteorological files to use.
 
     runlist = []
-    if hdirpath[-1] != "/":
-        hdirpath += "/"
-    hysplitdir = hdirpath + "exec/"
+    #if hdirpath[-1] != "/":
+    #    hdirpath += "/"
+    hysplitdir = os.path.join(hdirpath + "exec")
 
     iii = 0
     for (dirpath, dirnames, filenames) in walk(tdirpath):
@@ -360,8 +360,8 @@ def create_vmix_controls(
     runlist = []  # list of RunDescriptor Objects
     if hdirpath[-1] != "/":
         hdirpath += "/"
-    hysplitdir = hdirpath + "exec/"
-    landusedir = hdirpath + "bdyfiles/"
+    hysplitdir = os.path.join(hdirpath,"exec")
+    landusedir = os.path.join(hdirpath, "bdyfiles")
 
     dtree = dirtree(tdirpath, sdate, edate, chkdir=False, dhour=timechunks)
     vstr = ""
@@ -474,7 +474,7 @@ def create_nei_runlist(
 
     # dstart = sdate
     # dend = edate
-    hysplitdir = hdirpath + "exec/"
+    hysplitdir = os.path.join(hdirpath, 'exec')
     runlist = []
     dtree = dirtree(tdirpath, sdate, edate, chkdir=False, dhour=timechunks)
     for dirpath in dtree:
@@ -520,8 +520,8 @@ def nei_controls(
     runlist = []  # list of RunDescriptor Objects
     if hdirpath[-1] != "/":
         hdirpath += "/"
-    hysplitdir = hdirpath + "exec/"
-    landusedir = hdirpath + "bdyfiles/"
+    hysplitdir = os.path.join(hdirpath, "exec")
+    landusedir = os.path.join(hdirpath, "bdyfiles")
     #print("LANDUSEDIR", landusedir, hdirpath)
     dtree = dirtree(tdirpath, sdate, edate, chkdir=False, dhour=timechunks)
     iii = 0
@@ -797,7 +797,7 @@ def create_controls(
                     )
 
                     with open(wdir + "/rundatem.sh", "w") as fid:
-                        fid.write("MDL=" + hysplitdir + "\n")
+                        fid.write("MDL=" + hysplitdir + "/\n")
                         fid.write(unit_mult(units=units))
                         fid.write(statmainstr())
 
@@ -909,7 +909,7 @@ class RunScriptClass:
     def main(self):
         rstr = self.make_hstr()
         if self.runlist:
-            rstr += "MDL=" + self.runlist[0].hysplitdir + "\n"
+            rstr += "MDL=" + self.runlist[0].hysplitdir + "/\n"
             # rstr += unit_mult(units=units)
             iii = 0
             for runstr in self.mainstr_generator():
@@ -1057,13 +1057,15 @@ class RunScript(RunScriptClass):
             if run.parinitA != "None":
                 rstr += "cp " + run.parinit_directory + run.parinitA
                 rstr += " " + run.parinitB + "\n"
-            if check:
-                if os.path.isfile(run.directory + "/cdump." + run.suffix):
-                    norstr = True
-                    print("cdump exists ", run.directory, run.suffix)
-                else:
+            if os.path.isfile(run.directory + "/cdump." + run.suffix):
+                rstr += '# cdump file exists \n'
+                if check:
+                   rstr += '# '
+                    #norstr = True
+                logger.info("cdump exists " + run.directory + ' ' +  run.suffix)
+                #else:
                     # print('cdump does not exist ', run.directory, run.suffix)
-                    pass
+                #    pass
             if nice:
                 rstr += "nohup "
             rstr += "${MDL}" + run.hysplit_version + " " + run.suffix
@@ -1104,6 +1106,12 @@ class RunDescriptor(object):
         )  # parinit file associated with the run.
         # should be full path.
         self.oris = self.get_oris()
+        self.checkhysplit()
+
+    def checkhysplit(self):
+        hfile = os.path.join(self.hysplitdir, self.hysplit_version)
+        if not os.path.isfile(hfile):
+           logger.warning('hysplit executable not found ' + hfile)
 
     def __str__(self):
         rstr = ""
@@ -1180,7 +1188,7 @@ class RunDescriptor(object):
             rstr += " " + self.parinitB + "\n"
         if nice:
             rstr += "nice "
-        rstr += self.hysplitdir + self.hysplit_version + " " + self.suffix
+        rstr += os.path.join(self.hysplitdir, self.hysplit_version) + " " + self.suffix
         return rstr
 
 
