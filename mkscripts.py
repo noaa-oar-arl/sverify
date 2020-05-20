@@ -223,7 +223,7 @@ def main():
 if __name__ == "__main__":
    if sys.argv.count("--debug") > 0:
        log_level = logging.DEBUG
-   elif sys.argv.count("--verbose") > 0:
+   elif sys.argv.count("--quiet") == 0:
        log_level = logging.INFO
    else:
        log_level = logging.WARNING
