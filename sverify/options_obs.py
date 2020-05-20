@@ -71,6 +71,10 @@ def make_geometry(options, obsfile):
         #logger.debug('sumfile ' + sumfile + str(t2))
         #logger.debug('cemsfile ' + cemsfile + str(t3))
 
+def options_geometry(options, d1,d2,area):
+    obs = create_obs(options, d1, d2, area, rfignum=0)
+    make_geometry(options, obs.csvfile)
+
 def options_obs_main(options, d1, d2, area, source_chunks, 
                      run_duration,  
                      rfignum, svensemble, met=True,
@@ -133,7 +137,8 @@ def options_obs_main(options, d1, d2, area, source_chunks,
          nei = svnei.NeiSummary()
          nei.load(options.tdir + 'neifiles/' + options.neiconfig)
          meto.add_nei_data(nei.df)
-
+    else:
+         logger.info("No neiconfig file found in configuration file")
     # plot 2d histograms of SO2 measurements and measured wind speeds. 
     make_hexbin(options, meto)
     plt.show()
