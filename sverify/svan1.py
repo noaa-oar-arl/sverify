@@ -4,6 +4,7 @@ import datetime
 import time
 import sys
 import os
+import logging
 from os import path, chdir
 from subprocess import call
 import pandas as pd
@@ -27,6 +28,7 @@ had modeled emissions which reached the sites.
 We could also possibly use the HYSPLIT reader for this.
 """
 
+logger = logging.getLogger(__name__)
 
 def classify(df):
     # not used yet.
