@@ -215,7 +215,7 @@ def make_map(options, obs, d1, d2, area):
 def get_nei(options,d1,d2,area):
     if options.neiconfig:
         logger.info('NEI file in configuration file')
-        nei = NeiSummary(options.tdir + 'neifiles/' + options.neiconfig)
+        nei = svnei.NeiSummary(options.tdir + 'neifiles/' + options.neiconfig)
     else:
         logger.info('NEI file not in configuration file')
         nei = svnei.NeiData(options.ndir)
