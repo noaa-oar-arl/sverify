@@ -1,3 +1,4 @@
+import os
 import logging
 import matplotlib.pyplot as plt
 from sverify.svcems import SEmissions
@@ -16,6 +17,16 @@ from sverify.svens import ensemble_emitimes
 #    )
 
 logger = logging.getLogger(__name__)
+
+def check_apifiles_dir(tdir):
+    dname = os.path.join(tdir, 'apifiles')
+    if not os.path.isdir(dname):
+       logger.warning('Please create the following directory ' + dname)
+       wstr = 'Files related to CEMS data will be placed in this directory'
+       logger.warning(wstr)
+       return False
+    else:
+       return True
 
 def get_ef(options, d1, d2, area, source_chunks, verbose=False):
     #with open(logfile, 'a') as fid:
@@ -44,6 +55,13 @@ def get_ef(options, d1, d2, area, source_chunks, verbose=False):
 
 def options_cems_main(options, d1, d2, area, source_chunks,
                       ensemble=False, efiles=False, verbose=False):
+    # returns ef : SEmissions object
+    #         rfit : int
+    if not check_apifiles_dir(options.tdir):
+       logger.warning('Cannot get CEMS data without apifiles directory')
+       return None , None
+      
+
     ef = get_ef(options, d1, d2, area, source_chunks, verbose=verbose)
 
     rfignum = ef.fignum
