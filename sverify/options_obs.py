@@ -79,7 +79,8 @@ def options_geometry(options, d1,d2,area):
 def options_obs_main(options, d1, d2, area, source_chunks, 
                      run_duration,  
                      rfignum, svensemble, met=True,
-                     datem=False):
+                     datem=False,
+                     create_plots=True):
     #INPUTS 
     # options
     # source_chunks
@@ -125,12 +126,12 @@ def options_obs_main(options, d1, d2, area, source_chunks,
     # plot histogram of wind speeds at two sites. 
     #meto.plot_all_winds()
     #sys.exit()
-
-    # create map with obs and power plants (if source_summary file available)
-    make_map(options, obs, d1, d2, area)
-    # PLOT time series of observations
-    logger.info('Plotting obs time series')
-    obs.nowarningplot(save=True, quiet=options.quiet)
+    if create_plots:
+        # create map with obs and power plants (if source_summary file available)
+        make_map(options, obs, d1, d2, area)
+        # PLOT time series of observations
+        logger.info('Plotting obs time series')
+        obs.nowarningplot(save=True, quiet=options.quiet)
     return meto, obs
     #meto.fignum = obs.fignum+1
 

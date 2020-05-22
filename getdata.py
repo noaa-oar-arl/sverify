@@ -57,6 +57,14 @@ def main():
         help="Retrieve AQS data",
     )
     parser.add_option(
+        "--plot",
+        action="store_true",
+        dest="plot",
+        default=False,
+        help="Create Plots. Map and time series plots.",
+    )
+
+    parser.add_option(
         "--cems",
         action="store_true",
         dest="cems",
@@ -183,9 +191,10 @@ def main():
         # FILES CREATED
         # source_summary.csv
         from sverify import options_cems
-        ef, rfignum = options_cems.options_cems_main(
+        options_cems.options_cems_main(
             options, d1, d2, area, source_chunks, 
-            svp.ensemble, opts.efiles, verbose=opts.debug
+            svp.ensemble, opts.efiles, verbose=opts.debug,
+            create_plots = opts.plot
         )
     ##------------------------------------------------------##
     ## Get ISH data
@@ -218,8 +227,8 @@ def main():
             run_duration,
             rfignum,
             svp.ensemble,
-            datem = opts.datem
-            
+            datem = opts.datem,
+            create_plots = opts.plot
         )
 
 

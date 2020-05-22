@@ -54,7 +54,8 @@ def get_ef(options, d1, d2, area, source_chunks, verbose=False):
 
 
 def options_cems_main(options, d1, d2, area, source_chunks,
-                      ensemble=False, efiles=False, verbose=False):
+                      ensemble=False, efiles=False, verbose=False,
+                      create_plots=False):
     # returns ef : SEmissions object
     #         rfit : int
     if not check_apifiles_dir(options.tdir):
@@ -80,6 +81,11 @@ def options_cems_main(options, d1, d2, area, source_chunks,
         )
         #return ef, rfignum
     # create plots of emissions
+    if create_plots:
+       make_plots(options,ef,rfignum)
+    return ef, rfignum
+
+def make_plots(options, ef, rfignum):
     logger.info('Creating plots of emissions')
     if options.quiet == 0:
         ef.nowarning_plot(save=True, quiet=False)
@@ -91,12 +97,12 @@ def options_cems_main(options, d1, d2, area, source_chunks,
     if options.quiet == 1:
         plt.close("all")
         rfignum = 1
-    if not options.obs:
-        #logger.debug("map fig number  " + str(rfignum))
-        mapfig = plt.figure(rfignum)
-        figmap, axmap, gl = create_map(rfignum)
-        ef.map(axmap)
-        plt.savefig(options.tdir + "map.jpg")
-        if options.quiet < 2:
-            plt.show()
-    return ef, rfignum
+    #if not options.obs:
+    #    #logger.debug("map fig number  " + str(rfignum))
+    #    mapfig = plt.figure(rfignum)
+    #    figmap, axmap, gl = create_map(rfignum)
+    #    ef.map(axmap)
+    #    plt.savefig(options.tdir + "map.jpg")
+    #    if options.quiet < 2:
+    #        plt.show()
+
