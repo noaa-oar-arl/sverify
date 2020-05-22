@@ -28,7 +28,7 @@ tag=run1a
 
 # area defines box to search for cems / aqs data
 # latmin: lonmin: latmax: lonmax
-area=38.5:-98.0:37.5:-96.00
+area=35.5:-98.0:37.5:-96.00
 
 # list of ORIS codes to retrieve data for.
 # if None then will retrieve data for all ORIS
