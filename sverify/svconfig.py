@@ -264,6 +264,8 @@ class ConfigFile(NameList):
             rval = True
         elif "false" in val.lower():
             rval = False
+        elif "none" in val.lower():
+            rval = False
         elif val.strip() == '1':
             rval = True
         elif val.strip() == '0':
@@ -285,11 +287,28 @@ class ConfigFile(NameList):
     def process_oris(self):
         return self.orislist.split(":")
 
+    def testforbool(self, val):
+        if isinstance(val, bool):
+            rval = val
+        elif not val:
+            rval = False
+        elif "true" in val.lower():
+            rval = True
+        elif "false" in val.lower():
+            rval = False
+        elif "none" in val.lower():
+            rval = False
+        else:
+            rval = val
+        return rval 
+
     def hash2att(self):
         ## should be all lower case here.
         ## namelist is not case sensitive and
         ## all keys are converted to lower case.
         self.neiconfig = self.test('neiconfig', self.neiconfig)
+        self.neiconfig = self.testforbool(self.neiconfig)
+        #print('NEICONFIG', self.neiconfig, type(self.neiconfig)) 
         self.ndir = self.test('neidir', self.ndir)
 
         self.bounds = self.test("area", self.bounds)

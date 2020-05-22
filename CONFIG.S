@@ -28,17 +28,17 @@ tag=run1a
 
 # area defines box to search for cems / aqs data
 # latmin: lonmin: latmax: lonmax
-area=38.3:-77.0:38.4:-76.95
+area=38.5:-98.0:37.5:-96.00
 
 # list of ORIS codes to retrieve data for.
 # if None then will retrieve data for all ORIS
 # codes found in the area
-oris = 8042:1066
+#oris = 8042:1066
 #oris = None
 
 # drange defines date range for search
 # YYYY:M:D:YYYY:M:D
-drange=2009:1:1:2009:1:31
+drange=2016:1:1:2016:12:31
 # directory where files will be written.
 outdir=/outputdir/subdir/
 # directory where hysplit executable is found.
@@ -63,5 +63,6 @@ heat=50e6
 # File with information on nei sources which could
 # be used to create CONTROL files for HYSPLIT
 # the neiconfig file MUST be found in the $outdir/neifiles/
-neiconfig= 'CONFIG.nei'
+#neiconfig= 'CONFIG.nei'
+neiconfig= None
 

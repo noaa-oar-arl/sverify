@@ -24,6 +24,7 @@ make_hexbin
 
 logger = logging.getLogger(__name__)
 
+
 def autocorr(options, d1, d2, area, source_chunks, 
                      run_duration, rfignum):
     obs = create_obs(options, d1, d2, area, rfignum)
@@ -106,8 +107,6 @@ def options_obs_main(options, d1, d2, area, source_chunks,
     #obs.try_ar()
 
     # make the geometry.csv file 
-    #with open(logfile, 'a') as fid:
-    #    fid.write('Creating geometry.csv file\n')
     make_geometry(options, obs.csvfile)
 
     # create the datem files in each subdirectory.
@@ -119,7 +118,6 @@ def options_obs_main(options, d1, d2, area, source_chunks,
     elif datem:
         logger.info("writing datem files")
         obs.obs2datem(d1, ochunks=(source_chunks, run_duration), tdir=options.tdir)
-
     # create a MetObs object which specifically has the met data from the obs.
     meto = create_metobs(obs, options, met=met)
     #meto.clustering_csv(options.tdir)
@@ -130,9 +128,17 @@ def options_obs_main(options, d1, d2, area, source_chunks,
 
     # create map with obs and power plants (if source_summary file available)
     make_map(options, obs, d1, d2, area)
+    # PLOT time series of observations
+    logger.info('Plotting obs time series')
+    obs.nowarningplot(save=True, quiet=options.quiet)
+    return meto, obs
+    #meto.fignum = obs.fignum+1
+
+def make_hexbin():
+    # TO DO - this was split off from main.
+    # create 2d distributions of wind direction and so2 measurements.
     meto.fignum = obs.fignum+1
 
-    # create 2d distributions of wind direction and so2 measurements.
     if options.neiconfig:
          nei = svnei.NeiSummary()
          nei.load(options.tdir + 'neifiles/' + options.neiconfig)
@@ -143,10 +149,6 @@ def options_obs_main(options, d1, d2, area, source_chunks,
     make_hexbin(options, meto)
     plt.show()
 
-    # PLOT time series of observations
-    logger.info('Plotting obs time series')
-    obs.nowarningplot(save=True, quiet=options.quiet)
-    return meto, obs
 
 #def make_map_nice(options, obs, d1, d2, area):
 def get_ish(options,d1,d2,area):   
