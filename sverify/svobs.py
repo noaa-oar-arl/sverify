@@ -53,6 +53,23 @@ def obs_pivot(df):
 
     return wpivot
 
+def rename_columns(df=pd.DataFrame()):
+    """
+    To be used with output of obs_pivot to make
+    more manageable column names.
+    """
+    newc = []
+    for col in self.df.columns.values:
+        if isinstance(col, tuple):
+           if 'obs' not in col[0]:
+               val = col[0].strip()
+           else:
+               val = col[1].strip()
+        else:
+           val = col
+        newc.append(self.rename_sub(val))
+    return newc
+
 def print_info(df, cname):
     """
     creates the info_obs files.
@@ -118,6 +135,15 @@ def generate_obs(siteidlist, obsfile):
         yield ts
 
 def get_tseries(df, siteid, var="obs", svar="siteid", convert=False):
+    """
+    df : pandas DataFrame
+    siteid : integer
+    var : str
+    svar : str
+    Returns 
+    series : pandsa time series
+    """
+
     #qqq = df["siteid"].unique()
     df = df[df[svar] == siteid]
     df.set_index("time", inplace=True)
@@ -240,16 +266,19 @@ class SObs(object):
         """
         autocorrelation of measurements
         """
+        fignum=0
         for sid, nlist, alist in self.calc_autocorr():
         #for sid, ts, ms in self.generate_ts(sidlist=None):
         #    alist = []
         #    nlist = np.arange(0,48)
         #    for nnn in nlist:
         #        alist.append(ts.autocorr(lag=nnn))
+            fig = plt.figure(fignum)
             plt.plot(nlist, alist, 'k.')
             plt.title(str(sid))
             plt.savefig(str(sid) + 'obs.autocorr.png')
-            plt.show()    
+            fignum +=1
+        plt.show()    
 
 
     def get_peaks(self, sidlist=None, pval=[0.95,1], plotfigs=True):
@@ -320,6 +349,7 @@ class SObs(object):
     #        plt.title(sid)
     #        plt.show() 
     def nowarningplot(self, save=True, quiet=True,sra=None, maxfig=10 ):
+        #logger.info('plotting with suppressed warnings')
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self.plot(save=save, quiet=quiet,sra=sra, maxfig=maxfig )
@@ -328,6 +358,15 @@ class SObs(object):
         """plot time series of observations"""
         if not sra:
             sra = self.obs["siteid"].unique()
+ 
+        # catch if 
+        if not isinstance(self.fignum, int): 
+           wstr = 'Invalide type for self.fignum ' + type(self.fignum)
+           logger.warning(wstr)
+           self.fignum=1
+        if not isinstance(maxfig, int): 
+           logger.warning('Invalide type for maxfig ' + type(maxfig))
+           maxfig=10
         #print("PLOT OBSERVATION SITES")
         #print(sra)
         sns.set()
@@ -363,9 +402,9 @@ class SObs(object):
                 if not quiet:
                     plt.show()
                 #plt.close("all")
-                self.fignum = 0
+                #self.fignum = 0
             # if quiet: plt.close('all')
-            logger.info("plotting obs figure " + str(self.fignum))
+            logger.info("plotting obs figure " + str(sid) + ' ' + str(self.fignum))
             self.fignum += 1
 
 
