@@ -99,6 +99,14 @@ def main():
         default=False,
         help="Retrieve NEI data.",
     )
+    parser.add_option(
+        "--arm",
+        action="store_true",
+        dest="arm",
+        default=False,
+        help="write datem files with arm locations",
+    )
+
 
     parser.add_option(
     "--debug",
@@ -117,9 +125,9 @@ def main():
     )
 
     (opts, args) = parser.parse_args()
-    if not opts.aqs and not opts.cems and not opts.ish and not opts.nei:
-        opts.aqs = True
-        opts.cems = True
+    #if not opts.aqs and not opts.cems and not opts.ish and not opts.nei:
+    #    opts.aqs = True
+    #    opts.cems = True
 
     options = svconfig.ConfigFile(opts.configfile)
     if opts.print_help:
@@ -231,7 +239,9 @@ def main():
             create_plots = opts.plot
         )
 
-
+    if opts.arm:
+       from sverify import svarm
+       svarm.writedatem(options.tdir, d1,d2,source_chunks)
 
 if __name__ == "__main__":
    if sys.argv.count("--debug") > 0:
