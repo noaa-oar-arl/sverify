@@ -32,10 +32,37 @@ reads all c2datem output into a dataframe.
 Creates plots of obs and model forecast.
 
 """
-
-
-            
-
+def dirpath2date(dirpath):
+    """
+    converts directory path to a date.
+    """
+    temp = dirpath.split('/')
+    year = None
+    month = None
+    day = None
+    for val in temp:
+        if not val:
+           pass 
+        elif val[0] == 'y':
+           try:
+               year = int(val.replace('y',''))
+           except:
+               pass
+        elif val[0] == 'm':
+           try:
+               month = int(val.replace('m',''))
+           except:
+               pass
+        elif val[0] == 'd':
+           try:
+               day = int(val.replace('d',''))
+           except:
+               pass
+    if year and month and day:
+       rval =  datetime.datetime(year, month, day)
+    else:
+       rval = None
+    return rval
 
 class DatemOutput:
 
@@ -56,7 +83,6 @@ class DatemOutput:
     fill_hash
     find_files
     writedatem
-    fromdataA
 
 
     Caveats - there should be no extra dataA files in the directories.
@@ -75,58 +101,41 @@ class DatemOutput:
         self.sidlist = [] 
 
         ## internal use
-        self.plist = ['p1','p2','p3']
+        #self.plist = ['p1','p2','p3']
         self.zlist = ['z1','z2','z3','z4']
         self.plist = [None]
         
         #self.chash = {}  #dict. key is oris code. value is a color.
         #self.set_colors()
  
-    def dirpath2date(self, dirpath):
-        temp = dirpath.split('/')
-        year = None
-        month = None
-        day = None
-        for val in temp:
-            if not val:
-               pass 
-            elif val[0] == 'y':
-               try:
-                   year = int(val.replace('y',''))
-               except:
-                   pass
-            elif val[0] == 'm':
-               try:
-                   month = int(val.replace('m',''))
-               except:
-                   pass
-            elif val[0] == 'd':
-               try:
-                   day = int(val.replace('d',''))
-               except:
-                   pass
-        if year and month and day:
-           rval =  datetime.datetime(year, month, day)
-        else:
-           rval = None
-        return rval
-
     def datetest(self, dirpath):
+        """
+        decides from directory path whether files are in the specified date
+        range.
+        """
         if not self.daterange:
            rval = True
         else:
-           date = self.dirpath2date(dirpath)
-           print('DATE', date, self.daterange)
+           date = dirpath2date(dirpath)
            if not date:
               rval = False
            else:
+               #print('DATE ', date)
                if date >= self.daterange[0] and date <= self.daterange[1]:
                   rval = True
                else:
                   rval = False
         return rval
 
-    def find_files(self, oris=None, filetag=None, poll='p1', lev=None, verbose=True): 
+
+
+
+    def find_files(self, oris=None, 
+                         filetag=None,
+                         dirtaglist = ['None'], 
+                         poll='p1', 
+                         lev=None, 
+                         verbose=True): 
         """ oris should be oris number or None
             poll should indicate species (p1, p2, p3) or be None.
 
@@ -137,9 +146,12 @@ class DatemOutput:
         """
         dataA_files = []
         for (dirpath, dirnames, filenames) in os.walk(self.tdirpath):
-            print('CHECKING ', dirpath, filetag)
+            if verbose: print('CHECKING ', dirpath, filetag)
             if not self.datetest(dirpath): continue 
-            print('Keep going')
+            # this is to limit directory search.
+            if dirtaglist[0] != 'None':
+                if not any(word in dirpath for word in dirtaglist): continue
+            #if verbose: print('Passed ', dirpath, filetag)
             for fl in filenames:
                 test1 = 'dataA' in fl
                 if not filetag: test2 = True
@@ -154,11 +166,11 @@ class DatemOutput:
                 else: test4 = lev in fl
  
                 if test1 and test2 and test3 and test4: 
+                    if verbose: print('Passed ', dirpath, fl)
+                    print('Passed ', dirpath, fl)
                     #print('found', fl)
                     dataA_files.append(dirpath + '/' + fl)
-                    print('found', dirpath + '/' + fl)
-               
-                
+                    if verbose: print('found', dirpath + '/' + fl)
         return dataA_files 
 
     # instead of this will add this dataframe to metobs.
@@ -191,10 +203,10 @@ class DatemOutput:
            cnames.extend(self.orislist) 
            self.writedatem(dfile, bymonth=True, poll=None, cnames=cnames)
 
-    def readc2datem(self, poll=None, frq = 'H'):
-        flist = self.find_files(oris=None, poll=poll)
-        df = self.fromdataA(flist)
-        self.df = df
+    #def readc2datem(self, poll=None, frq = 'H'):
+    #    flist = self.find_files(oris=None, poll=poll)
+    #    df = self.fromdataA(flist)
+    #    self.df = df
 
     def writedatemall(self, dfile, bymonth=True, poll=None,
                    cnames = None):
@@ -296,28 +308,50 @@ class DatemOutput:
         else:
             lev = 1
         return source, pollnum, lev 
-         
 
-    def create_df(self, filelist):
+    def save_dataset(self,cname):
+        df.to_csv(cname, float_format="%0.1f")
+        
+    def open_dataset(self,verbose=False,dirtaglist=['None'],cname=None):
+        """
+        dirtaglist : list of strings.
+        This can be used to use the file path to tag the data as beloning
+        to a particular run. e.g. for the SREF data use dirtaglist
+        =['nmb','arw'].
+        """
+        if cname:
+            # reader has not been tested.
+            # may need to tweak how time column etc is read in.
+            #cname = os.path.join(cname)
+            def to_datetime(d):
+                return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S")
+            df = pd.read_csv(cname,sep=",",
+                             header=[0],
+                             index_col=[0],
+                             converters={"date":to_datetime})  
+            self.df = df
+            return df
+        else:
+            flist = self.find_files(verbose=verbose,
+                                dirtaglist=dirtaglist)
+            return self.create_df(flist,dirtaglist=dirtaglist)
+
+    def create_df(self, filelist,dirtaglist=['None']):
         df = pd.DataFrame()
         nnn = 0
         mcols = ['sid', 'date', 'lat','lon','obs', 'source', 'pollnum',\
-                 'stype', 'lev']
+                 'stype', 'lev','nwp']
         for fname  in filelist:
             temp = fname.split('/')
-            #print('HERE', temp)
             dname, pollnum, lev = self.parse_dataA_name(temp[-1])
-            #dname = temp[-1]
-            #dname = dname.replace('dataA_', '')
-            #dname = dname.replace('.txt', '')
-            #dname = dname.replace('.p1', '')
-            #dname = dname.replace('.p2', '')
-            #dname = dname.replace('.p3', '')
-            #if 'p1' in fname: pollnum=1
-            #elif 'p2' in fname: pollnum=2
-            #elif 'p3' in fname: pollnum=3
-
-
+            # find name of simulation
+            # if the tag (x) is part of the name (temp) then 
+            # use the whole string as the identifier in the nwp column.
+            nwp = [y for x in dirtaglist for y in temp if x in y]
+            if not nwp: nwp = ['other']
+            if nnn%50 == 0:
+               print('Working on ', fname)
+               print('tagging as', nwp)
             if 'EIS' in fname: stype = 'NEI'
             else: stype = 'ORIS'
             tempdf = read_dataA(fname)
@@ -327,6 +361,7 @@ class DatemOutput:
             tempdf['pollnum'] = pollnum
             tempdf['stype'] = stype
             tempdf['lev'] = lev
+            tempdf['nwp'] = nwp[0]
             dropra = ['day', 'hour', 'month', 'year']
             for dr in dropra:
                 if dr in tempdf.columns.values:
@@ -381,11 +416,11 @@ class DatemOutput:
         #print(df[0:10])
         return df
 
+
     def group(self, sid=None, sourcelist=None, pollnumlist=None, stypelist=None,
-               levlist=None):
-        mcols = ['sid', 'date', 'lat','lon','obs']
+               levlist=None,nwplist=None):
+        mcols = ['sid', 'date','nwp','lat','lon','obs']
         tempdf = self.df.copy()
-  
         # default is to only use the first level.
         # keep only levels in the list
         # should only adding levels with the same thickness. 
@@ -398,7 +433,6 @@ class DatemOutput:
            print('WARNING multiple levels being added.\n')
            print('This will only be correct if levels are the same\
                    thickness')
-
         #print('GROUP A', tempdf[0:5])
         # keep only sources in the sourcelist
         if sid:
@@ -411,6 +445,10 @@ class DatemOutput:
         # keep only polluntant species in the list
         if pollnumlist:
             tempdf = tempdf[tempdf['pollnum'].isin(pollnumlist)]
+        # keep nwp models in the list
+        if isinstance(nwplist,list) or isinstance(nwplist,np.ndarray):
+            tempdf = tempdf[tempdf.nwp.isin(nwplist)]
+
 
         tempdf = tempdf.groupby(mcols).sum().reset_index()
         # divide by nlev when adding levels of same thickness.
@@ -419,7 +457,70 @@ class DatemOutput:
         #print('GROUP B', sourcelist, tempdf[0:5])
         return tempdf
 
-    def pivot_sub(self, sid=None, vals='model', sourcelist=None, pollnumlist=None, stypelist=None):
+
+
+    def generate_plot_ts(self,levlist=[1]):
+        for df in self.generate_model_ts(levlist=levlist):
+            df.plot()
+            plt.show()
+
+    def generate_model_ts(self,levlist=[1]):
+        """
+        can be used to create the reliability curves.
+        
+        Return:
+        rlist : list of pandas DataFrames
+        one DtaFrame per observation site is returned.
+        index is date.
+        columns are model forecasts from different ensemble members.
+
+        """
+        # concatenates the observed data as another column.
+        sidlist = self.get_sidlist()
+        def subfunc(sid):
+            simulated =  self.get_ts(sid, levlist) 
+            obs =self.get_ts(sid,levlist,vals='obs')
+            # an observed row is created for each nwp model.
+            # they should all be the same.
+            # just use the first one.
+            obs = obs[self.df.nwp.unique()[0]]
+            obs.name = 'obs_' + str(sid)
+            return pd.concat([simulated, obs], axis=1)  
+        rlist = [subfunc(x) for x in sidlist]
+        return rlist
+          
+    def get_ts(self, sid, levlist=[1],vals='model'):
+        if vals == 'model': aggfunc=np.sum
+        elif vals == 'obs' : aggfunc=np.max
+
+        sourcelist = self.df.source.unique()
+        nlist = self.df.nwp.unique()
+        # this will add multiple levels if necessary.
+        sdf2 = self.group(sid=sid,
+                          levlist = levlist,
+                          sourcelist=sourcelist,
+                          stypelist=['ORIS'],
+                          nwplist=nlist)
+        # creates one column of values per model. 
+        df = pd.pivot_table(sdf2, 
+                            values=vals,
+                            index=['date'],
+                            columns=['nwp'],
+                            aggfunc=aggfunc)
+        # dataA does not print out 0,0 pairs. Add them in here.
+        dftemp = df.resample("H").asfreq()
+        for nval in self.df.nwp.unique():
+            dftemp[nval].fillna(0, inplace=True)
+        return dftemp
+
+    def pivot_sub(self, sid=None, 
+                  vals='model', 
+                  nwplist=None, 
+                  sourcelist=None, 
+                  pollnumlist=None, 
+                  stypelist=None):
+        # can be fed into reliability curve class.
+
         if vals not in ['model', 'obs']:
            vals = 'model'
         tempdf = self.df.copy()
@@ -430,6 +531,8 @@ class DatemOutput:
             tempdf = tempdf[tempdf['stype'].isin(stypelist)]
         if pollnumlist:
             tempdf = tempdf[tempdf['pollnum'].isin(pollnumlist)]
+        if nwplist:
+            tempdf = tempdf[tempdf['nwp'].isin(nwplist)]
         df = pd.pivot_table(tempdf, values=vals,
                             index = ['date'],
                             columns = 'sid', aggfunc=np.sum)
@@ -443,6 +546,9 @@ class DatemOutput:
         tempdf = df[df['stype'] != 'NEI']
         slist = tempdf['source'].unique()
         return list(elist), list(slist)
+
+    def nwplist(self):
+        return list(self.df.nwp.unique())
 
     def get_sidlist(self):
         return self.df['sid'].unique()
@@ -561,4 +667,23 @@ class DatemOutput:
             return dftemp
             #msitedata = MatchedData(obs, model)
 
+
+
+def get_model_ts(sdf, site,levlist):
+    model_ts = sdf.group(sid, stypelist=['ORIS'], levelist=levlist)
+    
+#Create the reliability curve
+# 1. Get hourly time series of model data.
+# 2. calculate percent
+
+
+def plot1(sdf):
+    cols = sdf.columns.values
+    arw = [x for x in cols if 'arw' in x]
+
+
+
+
+
+ 
 
