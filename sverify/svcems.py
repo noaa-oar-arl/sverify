@@ -997,7 +997,8 @@ class SEmissions(object):
                 efile.modify_header(hstring)
             # hardwire 24 hour cycle length
             dt = datetime.timedelta(hours=24)
-            efile.add_cycle(d1, "0024")
+            #efile.add_cycle(d1, "0024")
+            efile.add_cycle(d1, 24)
             for date, rate in dftemp.iteritems():
                 # if spnum!=1: print(date, rate, spnum)
                 if date >= edate:
@@ -1017,7 +1018,7 @@ class SEmissions(object):
 
                     while not check:
                         d1 = d1 + dt
-                        efile.add_cycle(d1, "0024")
+                        efile.add_cycle(d1, 24)
                         check = efile.add_record(
                             date,
                             record_duration,
