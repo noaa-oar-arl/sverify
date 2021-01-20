@@ -34,7 +34,8 @@ def create_obs(options, d1, d2, area, rfignum):
     # create the SObs object to get AQS data.    
     obs = sv.svobs.SObs([d1, d2], area, tdir=options.tdir)
     obs.fignum = rfignum
-    obs.find(tdir=options.tdir, test=options.runtest, units=options.cunits)
+    #obs.find(tdir=options.tdir, test=options.runtest, units=options.cunits)
+    obs.find(tdir=options.tdir)
     return obs
 
 def create_metobs(obs, options, met=True):
@@ -115,10 +116,12 @@ def options_obs_main(options, d1, d2, area, source_chunks,
         logger.info("writing datem files for ensembles")
         # if ensemble runs create dfiles in each subdirectory.
         sv.svens.create_ens_dfile(obs, d1, source_chunks, run_duration,
-                                options.tdir)
+                                options.tdir,options.metfmt)
     elif datem:
         logger.info("writing datem files")
         obs.obs2datem(d1, ochunks=(source_chunks, run_duration), tdir=options.tdir)
+    else:
+        logger.info('Not writing any datem files')
     # create a MetObs object which specifically has the met data from the obs.
     meto = create_metobs(obs, options, met=met)
     #meto.clustering_csv(options.tdir)

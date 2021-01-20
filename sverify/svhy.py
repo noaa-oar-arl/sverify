@@ -51,6 +51,21 @@ create_runlist:  returns a runlist. Similar to create_controls but does not
 write CONTROL and SETUP files.
 
 Currently runtime duration is set in the default CONTROL file only.
+
+changes
+
+16 Dec 2020 AMC  poutf was being written with too many '' 
+16 Dec 2020 AMC  functions added read_datem 
+16 Dec 2020 AMC  changes for href ensemble
+16 Dec 2020 AMC  changed options for running vmixing from -a2 to -w1
+30 Dec 2020 AMC  changed/removed some print statements.
+30 Dec 2020 AMC  fixed some problems with filename from pinpf and poutf having
+                 too many ''.
+   
+
+
+
+
 """
 
 
@@ -74,7 +89,7 @@ def default_setup(setupname="SETUP.CFG", wdir="./", units="PPB"):
            input rhash iu a RunParams object.
         """
     hrs = 5 * 24
-    pardumpname = "PARDUMP"
+    pardumpname = 'PARDUMP'
     parinitname = "PARINIT"
     namelist = {}
     # namelist['delt'] =  rhash.delt          #fix time step.
@@ -102,7 +117,8 @@ def default_setup(setupname="SETUP.CFG", wdir="./", units="PPB"):
     ##are short enough in this application that rather than restart a run, we would just re-run it.
     # namelist['NDUMP'] = str(int(hrs))                #create pardump file after this many hours.
     # namelist['NCYLC'] = str(int(hrs))                #add to pardump file every ncycl hours.
-    namelist["POUTF"] = '"' + pardumpname + '"'  # name of pardump file
+    #namelist["POUTF"] = '"' + pardumpname + '"'  # name of pardump file
+    namelist["POUTF"] = pardumpname  # name of pardump file
     namelist["PINPF"] = '"' + parinitname + '"'  # name of pardump file
 
     ##The termination grid is set in the function add_pterm_grid
@@ -307,17 +323,14 @@ def read_vmix(tdirpath, sdate, edate, timechunks, sid=None, verbose=False):
     for dirpath in dtree:
         for (d1, dirnames, filenames) in walk(dirpath):
             for fl in filenames:
-                # print('vmixing ', d1, fl)
                 test = True
                 if "STABILITY" in fl:
                     if not sid or str(sid) in fl:
                         temp = fl.split(".")
                         xsid = temp[1]
                         try:
-                            print("XSID ", fl, xsid, d1)
                             xsid = int(xsid.replace("V", ""))
                         except:
-                            print("XSID NOT VALID", fl, xsid, d1)
                             test = False
                         if test:
                             try:
@@ -331,6 +344,25 @@ def read_vmix(tdirpath, sdate, edate, timechunks, sid=None, verbose=False):
         print("No vmixing data found in ", dirpath)
     return vmix.df
 
+def read_datem(d1,fl):
+    #  print(d1, dirnames, fl)
+    # read the datem.txt file
+    cols = [
+        "year",
+        "month",
+        "day",
+        "hour",
+        "duration",
+        "lat",
+        "lon",
+        "val",
+        "sid",
+        "ht",
+    ]
+    # logger.debug('vmix from DATEM FILE', d1+fl)
+    dfdatem = datem.read_datem_file(d1 + fl, colra=cols, header=2)
+    dfdatem = dfdatem[["lat", "lon", "sid"]]
+    return dfdatem
 
 def create_vmix_controls(
     tdirpath,
@@ -357,6 +389,8 @@ def create_vmix_controls(
     met_files = MetFiles(metfmt)
     if "sref" in metfmt:
         met_files.set_mdt(24)
+    elif "href" in metfmt:
+        met_files.set_mdt(24)
     runlist = []  # list of RunDescriptor Objects
     if hdirpath[-1] != "/":
         hdirpath += "/"
@@ -373,24 +407,9 @@ def create_vmix_controls(
                 # if iii == 0:
                 #    firstdirpath = dirpath
                 if fl == "datem.txt":
-                    #  print(d1, dirnames, fl)
-                    # read the datem.txt file
-                    cols = [
-                        "year",
-                        "month",
-                        "day",
-                        "hour",
-                        "duration",
-                        "lat",
-                        "lon",
-                        "val",
-                        "sid",
-                        "ht",
-                    ]
-                    # logger.debug('vmix from DATEM FILE', d1+fl)
-                    dfdatem = datem.read_datem_file(d1 + fl, colra=cols, header=2)
-                    dfdatem = dfdatem[["lat", "lon", "sid"]]
-                    dfdatem = dfdatem.drop_duplicates()
+                    vlist = []
+                    dfdatem = read_datem(d1,fl)
+                
                     # do not overwrite, if these files already created
                     # previously.
                     if write:
@@ -403,13 +422,20 @@ def create_vmix_controls(
                     for index, row in dfdatem.iterrows():
                         lat = row["lat"]
                         lon = row["lon"]
-                        pid = int(row["sid"])
-                        # print('PID', str(pid))
+                        try:
+                            pid = int(row["sid"])
+                        except:
+                            pid = row["sid"]
                         suffix = "V" + str(pid)
+                        
+                        # if already have this location continue.
+                        if suffix in vlist: continue
+
                         run = RunDescriptor(
                             d1, suffix, hysplitdir, "vmixing", parinit="None"
                         )
                         runlist.append(run)
+                        vlist.append(suffix)
 
                         # skip the rest of the loop if only want to create
                         # list of run descriptors.
@@ -534,7 +560,7 @@ def nei_controls(
             setupfile.rename("SETUP." + suffix, working_directory=dirpath + "/")
             setupfile.add("NDUMP", str(timechunks))
             setupfile.add("NCYCL", str(timechunks))
-            setupfile.add("POUTF", '"PARDUMP.' + suffix + '"')
+            setupfile.add("POUTF", 'PARDUMP.' + suffix )
             setupfile.add("PINPF", '"PARINIT.' + suffix + '"')
             setupfile.write(verbose=False)
 
@@ -656,6 +682,8 @@ def create_controls(
     # correct time spacing of files for the SREF.
     if "sref" in metfmt:
         met_files.set_mdt(24)
+    elif "href" in metfmt:
+        met_files.set_mdt(24)
 
     runlist = []  # list of RunDescriptor Objects
     if hdirpath[-1] != "/":
@@ -713,7 +741,8 @@ def create_controls(
                     setupfile.read()
                     setupfile.add("NDUMP", str(timechunks))
                     setupfile.add("NCYCL", str(timechunks))
-                    setupfile.add("POUTF", '"PARDUMP.' + suffix + '"')
+                    #setupfile.add("POUTF", '"PARDUMP.' + suffix + '"')
+                    setupfile.add("POUTF", 'PARDUMP.' + suffix )
                     setupfile.add("PINPF", '"PARINIT.' + suffix + '"')
                     if not tcm:
                         setupfile.add("NINIT", "1")
@@ -826,6 +855,7 @@ def unit_mult(units="ug/m3", emult=None):
     rstr = ""
     # rstr = "#emission in kg (mult by 1e9)" + "\n"
     if units.lower().strip() == "ppb":
+        rstr += "#emission in kg (mult by 1e9)" + "\n"
         rstr += "#convert to volume mixing ratio"
         rstr += "#(mult by 0.4522)" + "\n"
         rstr += "mult=4.522e8" + "\n"
@@ -914,7 +944,9 @@ class RunScriptClass:
             iii = 0
             for runstr in self.mainstr_generator():
                 rstr += runstr
-        with open(self.tdirpath + "/" + self.scriptname, "w") as fid:
+        name = self.tdirpath + "/" + self.scriptname
+        with open(name, "w") as fid:
+            logger.info('writing {}'.format(name))
             fid.write(rstr)
 
     def mainstr_generator(self):
@@ -939,7 +971,8 @@ class RunScriptClass:
 
 class VmixScript(RunScriptClass):
     def mstr(self, run):
-        rstr = "$MDL/vmixing -a2 -p" + run.suffix + " &"
+        #rstr = "$MDL/vmixing -a2 -p" + run.suffix + " &"
+        rstr = "$MDL/vmixing -a2 -w1 -p" + run.suffix + " &"
         rstr += "\n"
         return rstr
 
@@ -1059,8 +1092,9 @@ class RunScript(RunScriptClass):
                 rstr += " " + run.parinitB + "\n"
             if os.path.isfile(run.directory + "/cdump." + run.suffix):
                 rstr += '# cdump file exists \n'
-                if check:
-                   rstr += '# '
+                # TODO implement this?
+                #if check:
+                #   rstr += '# '
                     #norstr = True
                 logger.info("cdump exists " + run.directory + ' ' +  run.suffix)
                 #else:

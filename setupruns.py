@@ -144,8 +144,9 @@ def main():
         default_control("CONTROL.0", options.tdir, run_duration, d1, area=area)
         # if ensemble then copy CONTROL.0 and SETUP.0 to ensemble directories
     elif opts.defaults and svp.ensemble:
+        logger.info("writing CONTROL.0 and SETUP.0 in ensemble directories")
         from sverify.svens import ensemble_defaults
-        ensemble_defaults(options.tdir)
+        ensemble_defaults(options.tdir,options.metfmt)
 
     ##------------------------------------------------------##
     # Create CONTROL and SETUP files in subdirectories.
@@ -154,6 +155,7 @@ def main():
     # CONTROL and SETUP and ASCDATA.CFG files in each subdirectory.
     # CONTROL files for vmixing. 
     elif not opts.defaults:
+       logger.info("running options_run_main")
        tcmrun=False
        main = False
        vmix = opts.vmix

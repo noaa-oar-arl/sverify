@@ -29,9 +29,10 @@ import sverify.svhy as svhy
 # base class.
 class SVEnsemble:
 
-    def __init__(self):
-        self.memberlist = self.create_member_list 
-
+    def __init__(self,name='ENS'):
+        #self.memberlist = self.create_member_list 
+        self.name = name
+         
     def create_member_list(self, inputlist):
         self.memberlist = inputlist
 
@@ -39,7 +40,23 @@ class SVEnsemble:
         self.memberlist.append(member)
         # remove duplicates.
         self.memberlist = list(set(self.memberlist))
-              
+
+class SV_ERA(SVEnsemble):
+
+    def create_member_list(self):
+        memberlist = []
+        for iii in range(0,10):
+            memberlist.append('m{:02d}'.format(iii))
+        return memberlist
+ 
+class SV_HREF(SVEnsemble):
+
+    def create_member_list(self):
+        memberlist = []
+        for iii in range(1,11):
+            memberlist.append('m{:02d}'.format(iii))
+        return memberlist
+ 
 class SV_SREF(SVEnsemble):
 
     def create_member_list(self):
@@ -51,27 +68,40 @@ class SV_SREF(SVEnsemble):
             memberlist.append(zzz + '.ctl')
         return memberlist
 
-def create_ens_dfile(obs, d1, source_chunks, run_duration, tdir):
-    memberlist = create_member_list_sref()
+def create_member_list(metfmt):
+    if 'sref' in metfmt.lower():
+        sens = SV_SREF()
+    elif 'href' in metfmt.lower():
+        sens = SV_HREF()
+    elif 'era' in metfmt.lower():
+        sens = SV_ERA()
+    # default is for members to be m01, m02, m03....
+    else:
+        sens = SV_HREF()
+    return sens.create_member_list()
+
+def create_ens_dfile(obs, d1, source_chunks, run_duration, tdir,metfmt='href'):
+    memberlist = create_member_list(metfmt)
     dirnamelist = make_ens_dirs(tdir, memberlist)
     for edir in dirnamelist:
         obs.obs2datem(d1, ochunks=(source_chunks, run_duration), tdir=edir) 
 
-
-def create_ensemble_vmix(options, d1, d2,source_chunks):
-    memberlist = create_member_list_sref()
+def create_ensemble_vmix(options, d1, d2,source_chunks,arm=True):
+    import sverify.svarm as svarm
+    memberlist = create_member_list(options.metfmt)
     dirnamelist = make_ens_dirs(options.tdir, memberlist)
     iii=0
     for edir, memlist  in zip(dirnamelist,memberlist):
         print(edir)
+        if arm: 
+           svarm.writedatem(os.path.join(options.tdir,edir),d1,d2,source_chunks)
+           logger.info('Writing data for ARM sites')
         runlist = svhy.create_vmix_controls(os.path.join(options.tdir, edir), options.hdir, d1,d2, source_chunks,
                                        metfmt='None', write=False)
         rs = svhy.VmixScript(options.tag + '.vmix.sh', runlist, edir)
 
-
-
 def create_ensemble_datem_scripts(options, d1, d2, source_chunks):
-    memberlist = create_member_list_sref()
+    memberlist = create_member_list(options.metfmt)
     dirnamelist = make_ens_dirs(options.tdir, memberlist)
     iii=0
     for edir in dirnamelist:
@@ -86,13 +116,13 @@ def create_ensemble_datem_scripts(options, d1, d2, source_chunks):
         iii+=1
     return rs
 
-def create_ensemble_scripts(options, d1, d2, source_chunks, check):
-    memberlist = create_member_list_sref()
+def create_ensemble_scripts(options, d1, d2, source_chunks, check,metfmt):
+    memberlist = create_member_list(metfmt)
     dirnamelist = make_ens_dirs(options.tdir, memberlist)
     iii=0
     for edir in dirnamelist:
-        print('TDIR', options.tdir)
         tdir = path.join(options.tdir, edir)
+        print('TDIR', tdir)
         runlist = svhy.create_runlist(tdir, options.hdir, d1, d2, source_chunks)
         rs = svhy.RunScript(options.tag + memberlist[iii] + '.sh', runlist,
                        tdir,
@@ -101,10 +131,10 @@ def create_ensemble_scripts(options, d1, d2, source_chunks, check):
     return rs
 
 
-def ensemble_defaults(tdir):
+def ensemble_defaults(tdir,metfmt):
     # simply copy the SETUP.0 and CONTROL.0 in the top directory
     # to the ensemble directories.
-    memberlist = create_member_list_sref()
+    memberlist = create_member_list(metfmt)
     dirnamelist = make_ens_dirs(tdir, memberlist)
    
     for edir in dirnamelist:
@@ -121,14 +151,15 @@ def ensemble_defaults(tdir):
 
 def ensemble_emitimes(options, metfmt, ef, source_chunks):
     # ef is an SEmissions object.
-    memberlist = create_member_list_sref()
+    memberlist = create_member_list(metfmt)
     iii = 0
     fhour=""
     # create directories for ensemble members.
     tdirpath = options.tdir
     dirnamelist = make_ens_dirs(tdirpath, memberlist)
     for sref in generate_sref_ens(metfmt, fhour, memberlist):
-        tdir = tdirpath + dirnamelist[iii]
+        #tdir = tdirpath + dirnamelist[iii]
+        tdir = dirnamelist[iii]
         # create emittimes files
         ef.create_emitimes(
             ef.d1,
@@ -145,7 +176,7 @@ def create_nei_ensemble_controls(tdirpath, hdirpath, neidf, sdate, edate, timech
                     tcm=False, orislist=None):
 
     fhour=''               #pick the forecast hour to use
-    memberlist = create_member_list_sref()
+    memberlist = create_member_list(metfmt)
     iii = 0
     # create directories for ensemble members.
     dirnamelist = make_ens_dirs(tdirpath, memberlist)
@@ -159,7 +190,7 @@ def create_nei_ensemble_controls(tdirpath, hdirpath, neidf, sdate, edate, timech
 def create_ensemble_vmix_controls(tdirpath, hdir, d1, d2, source_chunks,
                                   metfmt): 
     fhour=''               #pick the forecast hour to use
-    memberlist = create_member_list_sref()
+    memberlist = create_member_list(metfmt)
     iii = 0
     # create directories for ensemble members.
     if 'ENS' in metfmt: metfmt = metfmt.replace('ENS','')
@@ -177,12 +208,13 @@ def create_ensemble_controls(tdirpath, hdir, d1, d2, source_chunks, metfmt, unit
                     tcm=False, orislist=None):
 
     fhour=''               #pick the forecast hour to use
-    memberlist = create_member_list_sref()
+    memberlist = create_member_list(metfmt)
     iii = 0
     # create directories for ensemble members.
     dirnamelist = make_ens_dirs(tdirpath, memberlist)
     for sref in generate_sref_ens(metfmt, fhour, memberlist):
-        tdir = tdirpath + dirnamelist[iii]
+        #tdir = tdirpath + dirnamelist[iii]
+        tdir = dirnamelist[iii]
         print('ENSEMBLE', tdir)
         runlist = svhy.create_controls(tdir, hdir, d1, d2, source_chunks,
                                   sref, units, tcm, orislist, moffset=24)
@@ -193,8 +225,9 @@ def make_ens_dirs(tdirpath, memberlist):
     dirnamelist = []
     for member in memberlist:
         dname = member.replace('.', '_')
-        dirnamelist.append(dname)
+        #dirnamelist.append(dname)
         finaldir = os.path.join(tdirpath, dname)
+        dirnamelist.append(finaldir)
         if not path.isdir(finaldir) and chkdir:
             print('creating directory: ' , finaldir)
             callstr = 'mkdir -p ' +   finaldir

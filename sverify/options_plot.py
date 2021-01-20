@@ -10,6 +10,8 @@ import sverify as sv
 
 def time_series(options, d1, d2, vmet,
                       logfile):
+
+   # plot time series.
    with open(logfile, 'a') as fid:
      fid.write('Running options.datem\n')
    sss = sv.svcems.SourceSummary(fname = options.tag + '.source_summary.csv')
@@ -24,7 +26,6 @@ def time_series(options, d1, d2, vmet,
        vmet.plot_ts() 
 
    tsplot = svTimeSeries()
-  
     
    ob1 = PTimeSeries(ts, 
                      plotnum=1,

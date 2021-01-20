@@ -33,6 +33,13 @@ def main():
     #    "-a", type="string", dest="state", default="ND", help="two letter state code (ND)"
     # )
     parser.add_option(
+        "-a",
+        action="store_true",
+        dest="runarm",
+        default=False,
+        help="create vmix runs for ARM sites",
+    )
+    parser.add_option(
         "-i",
         type="string",
         dest="configfile",
@@ -108,14 +115,15 @@ def main():
     (opts, args) = parser.parse_args()
     if opts.check_cdump:
        wstr = '-c option set ' + str(opts.check_cdump)
-       wstr += 'lines to run HYSPLIT when cdump files exist will be'
-       wstr += 'commented out'
+       wstr += ' lines to run HYSPLIT when cdump files exist will be'
+       wstr += ' commented out'
 
     if not opts.check_cdump:
        wstr = '-c option not set ' + str(opts.check_cdump)
-       wstr += 'cdump files may be overwritten if script is run'
+       wstr += ' cdump files may be overwritten if script is run'
 
     logger.warning(wstr)
+    logger.info("Ensemble option{}".format(opts.ens))
 
     if opts.print_help:
         print("-------------------------------------------------------------")
@@ -171,37 +179,40 @@ def main():
             rs = DatemScript(
                   fname , nei_runlist, options.tdir, options.cunits, poll=1
                   )
-
+    # vmix and not ensemble.
     if opts.vmix and not opts.ens:
         runlist = create_vmix_controls(options.vdir, options.hdir, d1, d2,
                                        source_chunks, metfmt='None', write=False)
         fname = options.tag + '.vmix.sh'
         logger.info('writing script to run vmix ' + fname)
         rs = VmixScript(fname, runlist, options.tdir)
+    # vmix and ensemble.
     elif opts.vmix and opts.ens:
         logger.warning('Ensemble option set ')
         logger.info('writing script to run ensemble vmix ')
-        runlist = create_ensemble_vmix_controls(options.tdir, options.hdir, d1, d2,
+        runlist = svens.create_ensemble_vmix_controls(options.tdir, options.hdir, d1, d2,
                                        source_chunks, options.metfmt)
-        svens.create_ensemble_vmix(options, d1, d2, source_chunks)
+        svens.create_ensemble_vmix(options, d1, d2, source_chunks, arm=opts.runarm)
 
     # create ensemble scripts for running.
     if opts.run and not opts.nei and opts.ens:
         logger.warning('Ensemble option set ')
         svens.create_ensemble_scripts(options, d1, d2, source_chunks,
-                                       opts.check_cdump)
+                                       opts.check_cdump,options.metfmt)
 
+    # datem and ens but not nei
     if opts.datem and not opts.nei and opts.ens:
         logger.warning('Ensemble option set ')
         svens.create_ensemble_datem_scripts(options, d1, d2, source_chunks)
 
+    # run and ens but not nei  
     if opts.run and not opts.nei and not opts.ens:
         runlist = create_runlist(options.tdir, options.hdir, d1, d2, source_chunks)
         fname = options.tag + ".sh"
         logger.info('writing script to run HYSPLIT for CEMS sources: ' + fname)
         rs = RunScript(fname, runlist, options.tdir, check=opts.check_cdump)
 
-
+    # datem and ens but not nei
     if opts.datem and not opts.nei and not opts.ens:
         runlist = create_runlist(options.tdir, options.hdir, d1, d2, source_chunks)
         logger.info('writing scripts to create datemfiles for CEMS hysplit runs')

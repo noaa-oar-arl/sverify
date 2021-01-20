@@ -1,6 +1,7 @@
 from os import path
 import sys
 import matplotlib.pyplot as plt
+import logging
 import pandas as pd
 from sverify.svresults3 import DatemOutput
 from sverify.svcems import SourceSummary
@@ -17,11 +18,12 @@ from sverify.svens import create_member_list_srefA
 
 # Step3: add this object to the svmet object.
 
+logger = logging.getLogger(__name__)
 
 def options_model_main(options, d1, d2, vmet,
                       logfile, model_list=['sref']):
 
-    print('IN OPTIONS MODEL MAIN', model_list)
+    logger.info('options model meain {}'.format(str.join(', ',mode_list)))
     #vmet.plot_all_winds()
     #sys.exit()
     #if options.model_list == ['sref']:
@@ -34,9 +36,7 @@ def options_model_main(options, d1, d2, vmet,
     orislist = sss.check_oris(10)
     #orislist=[2103]
     for model in model_list:
-        print(model)
         tdir = path.join(options.tdir + model)
-        print('TDIR', tdir)
         # this adds the model data into a dictionary in vmet.
         vmet = options_model_sub(vmet, tdir, orislist, [d1,d2], model)
     # used for plotting the time series.
@@ -101,7 +101,7 @@ def options_model_prob(options, d1, d2, vmet,
 
 def options_model_sub(vmet, tdir, orislist, daterange, name):
    """
-   Add model objects to the vmet class.
+   Add model objects to the MetObs class.
    INPUTS
    vmet : MetObs object
    tdir : string. Directory where datem output is.
@@ -112,11 +112,12 @@ def options_model_sub(vmet, tdir, orislist, daterange, name):
    vmet
    """
 
-   print('ADDING model ', name)
+   #print('ADDING model ', name)
    svr = DatemOutput(tdir, orislist=orislist, daterange=daterange)
    flist = svr.find_files()
    svr.create_df(flist)
    svr.writedatemall(name + '.datem.txt')
+   logger.info('Writing file {}'.format(name+'.datem.txt'))
    #svr.plotall()
    if not vmet.isempty():
        #datemdf = svr.get_pivot()

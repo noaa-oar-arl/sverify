@@ -1,5 +1,7 @@
+import os
 import pandas as pd
 import numpy as np
+import logging
 import matplotlib
 #matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
@@ -18,6 +20,9 @@ import sverify.ptools as ptools
 from sverify.svan1 import geometry2hash
 import sverify.svobs as svobs
 import sverify.options_vmix as options_vmix
+from sverify.svens import create_member_list
+from sverify.svens import make_ens_dirs
+from sverify import svhy
 
 """
 FUNCTIONS
@@ -30,38 +35,180 @@ CLASSES
 MetObs
 
 """
+logger = logging.getLogger(__name__)
 
+def get_from_obs(obsdf):
+    """
+    obs : pandas DataFrame 
+    """
+    # Currenlty this overwrites anything that used to be in self.df
+    # only keep rows (sites) which have Met data.
+    #print("Making metobs from obs")
+    df =svobs.obs_pivot(obsdf)  # pivot table
+    #self.columns_original = self.df.columns.values
+    df.columns = rename_columns(df)
+    # checking to see if there is met data in the file.
+    return df
+   
+def drop_cols(dfin): 
+    """
+    dfin : pandas DataFrame
+    can use output from from_obs function.
+
+    drop rows which don't have any data in columns for met data.
+    WD, RH, TEMP, WS
+ 
+    Return:
+    df : pandas DataFrame
+    """
+    testcols = ['WD','RH','TEMP','WS']
+    overlap = [x for x in testcols if x in dfin.columns.values]
+    if not overlap:
+       df = pd.DataFrame()  
+       logger.critical('drop_cols function: No Met Data Found in DataFrame') 
+    else:
+       # drop rows which have all NANs in the columns which give
+       # metdata (WD, RH, TEMP, WS)
+       df = dfin.dropna(axis=0, how='all', subset=overlap)
+    return df
+
+def rename_columns(df=pd.DataFrame()):
+    #if df.empty
+    newc = []
+    for col in df.columns.values:
+        if isinstance(col, tuple):
+           if 'obs' not in col[0]:
+               val = col[0].strip()
+           else:
+               val = col[1].strip()
+        else:
+           val = col
+        newc.append(rename_sub(val))
+    return newc
+
+def rename_sub(istr):
+    rstr = istr
+    if 'WD' in istr: rstr = 'WDIR'
+    if 'RH' in istr: rstr = 'RH'
+    if 'T02M' in istr: rstr = 'TEMP'
+    if 'WS' in istr: rstr = 'WS'
+    if 'date' in istr: rstr = 'time'
+    if 'SO2' in istr.upper(): rstr = 'SO2'
+    if 'sid' in istr: rstr = 'siteid'
+    return rstr
 
 class VmixEns:
 
-
-    def __init__(self, d1, d2, step, mlist=['sref']):
+    def __init__(self, tdirpath, d1, d2, step, metfmt='href'):
         # step is like source_chunks
-        self.df = pd.DateFrame()
+        self.df = pd.DataFrame()
         self.sidlist = []
-        memberlist = create_member_list_sref()
+        memberlist = create_member_list(metfmt)
         dirnamelist = make_ens_dirs(tdirpath, memberlist)
         iii=0
         for dirname in dirnamelist:
-            vdf = options_vmix.read_vmix(dirname, d1, d2, step)
+            #vdf = options_vmix.read_vmix(dirname, d1, d2, step)
+            vdf = svhy.read_vmix(dirname, d1, d2, step)
             vdf['met'] = memberlist[iii]
             if iii==0:
                self.df = vdf
             else:
-               self.df = pd.concat(self.df, vdf)
+               self.df = pd.concat([self.df, vdf])
             iii+=1       
-        vlist = self.df.columns.values
-        #[date, PSQ, MixHgt, 10xKz, U*, Zo, Zterr, Kh, 10mWSPD
-        # DSWF, SFCP, RH2m, T02m, Density, Cld, u10m, v10m, WDIR,
-        # latitude, longitude, met, sid
-        self.sidlist = self.df.sid.unique()     
+        # rename the columns.
+        self.df.columns = rename_columns(self.df)
+        #[time, PSQ, MixHgt, 10xKz, U*, Zo, Zterr, Kh, WS,
+        # DSWF, SFCP, RH, T02m, Density, Cld, u10m, v10m, WDIR,
+        # latitude, longitude, met, siteid
+        self.sidlist = self.df.siteid.unique()     
  
     def pivot(self, val):
-        dfm = self.df[['date',val,'met','sid']]
-        pdf = pd.pivot_table(dfm, values=val, index=['date'],
-                             columns=['sid','met'])
+        dfm = self.df[['time',val,'met','siteid']]
+        #dfm.columns = ['time',val,'met','siteid']
+        pdf = pd.pivot_table(dfm, values=val, index=['time'],
+                             columns=['siteid','met'])
         return pdf
 
+    def addobs(self, obs, val):
+        """
+        obs : SVobs object.
+        Returns:
+        pandas dataframe with obs column.
+        """
+        df1 = self.pivot(val)
+        obsdf_temp = get_from_obs(obs.dfall)
+        obsdf = drop_cols(obsdf_temp)
+        obsdf['met'] = 'obs'
+        df2 = pd.pivot_table(obsdf, values=val, columns=['siteid','met'],
+                             index='time') 
+        mdf = pd.concat([df1,df2],axis=1)
+        return mdf
+
+    def compare1(self, rdf, val, sid, thresh=5):
+        df1 = self.pivot(val)
+        df1 = df1[sid]
+        iii=0
+        for rval in rdf.columns.values:
+            if rval in df1.columns.values:
+               dfmet = df1[rval]
+               dfconc = rdf[rval]
+               dfmet.name = 'met'
+               dfconc.name = 'conc'
+               new = pd.concat([dfconc, dfmet],axis=1)      
+               new.dropna(axis=0,inplace=True)
+               if iii==0:
+                  dfr = new
+               else:
+                  dfr = pd.concat([df4,new],axis=0) 
+        dfr = dfr[dfr.conc > thresh]
+        cb = plt.hexbin(dfr.met, dfr.conc,gridsize=[20,20])   
+        plt.colorbar(cb)
+        return dfr
+
+
+def plot_one(ax, rdf,clr1='blue',clf2='red'):
+    for rval in rdf.columns.values:
+        clr  = clr1
+        if 'obs' in rval: clr='red'
+        xvals = pd.to_datetime(rdf[rval].index)
+        yvals = rdf[rval].values 
+        ax.plot(xvals,yvals,color=clr)
+  
+
+def add_twin(ax,rdf, clr1='blue', clr2='red'):
+    # used with plot_ts below.
+    ax2 = ax.twinx()
+    plot_one(ax2,rdf,clr1,clr2)
+    #for rval in rdf.columns.values:
+    #    clr  = clr1
+    #    if 'obs' in rval: clr='red'
+    #    xvals = pd.to_datetime(rdf[rval].index)
+    #    yvals = rdf[rval].values 
+    #    ax2.plot(xvals,yvals,color=clr)
+
+def plot_ts(mdf, fignum=1):
+    # see href_metdata.ipynb for usage.
+    fig = plt.figure(fignum)
+    fig.set_size_inches(15,5)
+    ax1 = fig.add_subplot(1,1,1)
+    clr1 = [sns.xkcd_rgb['grey']]
+    clr2 = [sns.xkcd_rgb['bright blue']]
+    alpha1= 0.5
+    alpha2 = 1
+    for cval in mdf.columns.values:
+        clr = clr1[0]
+        alpha = alpha1
+        lw=1
+        if 'obs' in cval: 
+            clr = clr2[0]
+            alpha = alpha2
+            lw=2
+        #xvals = list(np.arange(1,len(mdf[cval].values)+1))
+        xvals = pd.to_datetime(mdf[cval].index.values)
+        yvals = mdf[cval].values
+        #ax1.plot(pd.to_datetime(mdf[cval].index.values), mdf[cval].values, clr, linewidth=2,alpha=alpha)
+        ax1.plot(xvals, yvals, color=clr, marker='.', linestyle='None', linewidth=lw,alpha=alpha)
+    return ax1
 
 def obs2metobs(obsobject):
     """
@@ -440,6 +587,10 @@ class MetObs(object):
         COLUMNS
           'time'
           'siteid'
+          'latitude'
+          longitude
+          RH
+          TEMP
           'wdir'
           'ws'
           'SO2'  gives observations of SO2.
@@ -449,6 +600,10 @@ class MetObs(object):
         Currently the meteorological data can either come from observations or
         from the vmixing output but not both. This should be changed so we can
         get all the data into one frame.
+
+        Currently model data is best handled by adding it to the self.model
+        dictionary. The values are dataframes with model data.
+
  
         Model data may be added with the add_model_all method. 
         This will add extra columns which have a hierarchical index 
@@ -469,20 +624,26 @@ class MetObs(object):
         between measurement sites and sources.
 
         """
+        # full dataframe
         self.df = pd.DataFrame()
+        # dataframe in which rows with no met data have been dropped.
+        self.metdf = pd.DataFrame()
+
         self.columns_original = []
         self.fignum = 1
         self.tag = tag
-       
+
+        # geometry.csv file to use.      
         self.geoname = geoname
 
         self.cemslist = []  #list of column names representing cems data.
         self.model_list = [] #list of columnnames representing model data
 
+        # dataframe with nei data
         self.neidf = pd.DataFrame()
         self.empty = self.isempty()
         #self.model = pd.DataFrame()
-        self.model =  {}  #dictionary of DataFrames
+        self.model =  {}  #dictionary of DataFrames with model data.
 
     def isempty(self):
         if self.df.empty: 
@@ -491,7 +652,6 @@ class MetObs(object):
         else: 
            self.empty=False
            return False
-
 
     def add_nei_data(self, df):
         self.neidf = df
@@ -600,33 +760,18 @@ class MetObs(object):
         # Currenlty this overwrites anything that used to be in self.df
         self.df = df
         self.columns_original = self.df.columns.values
-        self.rename_columns()
+        self.df.columns = rename_columns(self.df)
         self.isempty()      
 
-
-    def add_obs(self, obs):
-        df = svobs.obs_pivot(obs)
-        self.rename_columns()
-        testcols = ['WD','RH','TEMP','WS']
-        overlap = [x for x in testcols if x in self.df.columns.values]
- 
     def from_obs(self, obs):
+        """
+        obs : pandas DataFrame
+        """
         # Currenlty this overwrites anything that used to be in self.df
+        self.df = get_from_obs(obs)
         # only keep rows (sites) which have Met data.
-        #print("Making metobs from obs")
-        self.df =svobs.obs_pivot(obs)  # pivot table
-        self.columns_original = self.df.columns.values
-        self.rename_columns()
-        # checking to see if there is met data in the file.
-        testcols = ['WD','RH','TEMP','WS']
-        overlap = [x for x in testcols if x in self.df.columns.values]
-        if not overlap:
-           self.df = pd.DataFrame()  
-           print('No Met Data Found') 
-        else:
-           # drop rows which have all NANs in the columns which give
-           # metdata (WD, RH, TEMP, WS)
-           self.df = self.df.dropna(axis=0, how='all', subset=overlap)
+        self.metdf = drop_cols(self.df)
+        # update whether object considered empty.
         self.isempty()      
 
     def to_csv(self,tdir, csvfile=None):
@@ -646,35 +791,10 @@ class MetObs(object):
         df.to_csv(tdir + "met" + csvfile, header=True, float_format="%g")
           
  
-    def rename_sub(self, istr):
-        rstr = istr
-        if 'WD' in istr: rstr = 'WDIR'
-        if 'RH' in istr: rstr = 'RH'
-        if 'T02M' in istr: rstr = 'TEMP'
-        if 'WS' in istr: rstr = 'WS'
-        if 'date' in istr: rstr = 'time'
-        if 'SO2' in istr.upper(): rstr = 'SO2'
-        if 'sid' in istr: rstr = 'siteid'
-        return rstr
-
     def get_sites(self):
         if self.df.empty: return []
         return self.df['siteid'].unique()
    
-    def rename_columns(self, df=pd.DataFrame()):
-        #if df.empty
-        newc = []
-        for col in self.df.columns.values:
-            if isinstance(col, tuple):
-               if 'obs' not in col[0]:
-                   val = col[0].strip()
-               else:
-                   val = col[1].strip()
-            else:
-               val = col
-            newc.append(self.rename_sub(val))
-        self.df.columns = newc 
-        
     def nowarning_plothexbin(self, save=True, quiet=True):
         # get "Adding an axes using the same arguments as previous axes
         # warnings. This is intended behavior so want to suppress warning.
@@ -946,8 +1066,8 @@ class MetObs(object):
             vpi = so2==-9
             so2[vpi] = float('Nan') 
             #print(df.columns.values)
-            mval = 'MixHgt'
-            wdir = df[mval]
+            #mval = 'MixHgt'
+            #wdir = df[mval]
             #ax2.plot(wdir, 'b.', markersize=4)
             #ax1.plot(so2, '-k')
             #print('MODEL LIST', self.model_list)
@@ -999,6 +1119,7 @@ class MetObs(object):
             #ax2.set_ylabel('Probability of C > 2.5 ppb')
             #ax2.grid(False, which='both')
 
+          
             xdata = so2.index.tolist()
             dt = datetime.timedelta(hours=5*24)
             right = xdata[-1] -dt
@@ -1014,6 +1135,7 @@ class MetObs(object):
             plt.savefig(tag + str(site) + '.prob.png')
             plt.show()
             plt.close()
+            # so2 is the obs. 
             rc.reliability_add(so2, vals)
         rc.reliability_plot()
 
@@ -1024,9 +1146,9 @@ class MetObs(object):
         sns.set_style('whitegrid')
         slist = self.get_sites()
         self.date2hour()
-        fig2 = plt.figure(self.fignum+1)
-        fig2.set_size_inches(20,5)
-        axh1 = fig2.add_subplot(1,3,1)
+        #fig2 = plt.figure(self.fignum+1)
+        #fig2.set_size_inches(20,5)
+        #axh1 = fig2.add_subplot(1,3,1)
         wlist = {}
 
         df = self.df.copy()
@@ -1043,7 +1165,7 @@ class MetObs(object):
         df.dropna(axis=0, inplace=True)
 
         a = sns.PairGrid(df)
-        a.map_diag(sns.distplot)
+        #a.map_diag(sns.distplot)
         a.map_offdiag(sns.jointplot, kind='hex')
         plt.show()
         #c = df.columns.values
@@ -1095,8 +1217,9 @@ class MetObs(object):
                     #hexbin(hour,so2, axh3)       
                     ymax = np.max(cat['model'])   
                     ymax = 90
-                    orislist = addplants(site, axhash['wdir'], ymax=ymax,
-                                 geoname=self.geoname, add_text=False)
+                    if os.path.exists(self.geoname):
+                        orislist = addplants(site, axhash['wdir'], ymax=ymax,
+                                     geoname=self.geoname, add_text=False)
 
                     for var in ['wdir','wind speed', 'hour']:
                         ptools.set_hexbin(var,axhash[var], ymax, tag=tag)
@@ -1162,6 +1285,8 @@ class MetObs(object):
             plt.savefig(str(site) + 'autocorr.png')
             plt.show() 
 
+
+
     def plot_ts(self, levlist=None, save=True, quiet=False):
 
         # levlist should be a list of lists.
@@ -1178,8 +1303,6 @@ class MetObs(object):
         for site in slist:
             fig = plt.figure(self.fignum)
             fig.set_size_inches(15,5)
-
-
             # re-using these axis produces a warning.
             ax1 = fig.add_subplot(1,1,1)
             #ax2 = ax1.twinx()
@@ -1244,7 +1367,6 @@ class MetObs(object):
                 clrs.append(sns.xkcd_rgb['bright blue'])
                 clrs.append(sns.xkcd_rgb['kelly green'])
                 alpha = [0.5,0.5,0.5,0.5,0.5]
-
 
             for lev in levlist:
                 for name, oris_ts in self.add_model_ts(site, tp='ORIS',
@@ -1564,7 +1686,7 @@ class MetObs(object):
 
             df = self.df[self.df['siteid'] == site]
             print('HEXBIN for site ' , site) 
-            print(df[0:10])
+            #print(df[0:10])
 
             # remove missing measurements.
             df = df[df["SO2"] != -9]      
@@ -1596,8 +1718,9 @@ class MetObs(object):
 
             hexbin(xtest, ztest, axhash['wdir'], cbar=cbar,sz=szhash['wdir'])  
             ymax = np.max(ztest)
-            #addplants(site, axhash['wdir'], ymax=ymax, dthresh=50,  geoname=self.geoname,
-            #          add_text=False)
+            if os.path.exists(self.geoname):
+                addplants(site, axhash['wdir'], ymax=ymax, dthresh=50,  geoname=self.geoname,
+                          add_text=False)
 
             tag = self.tag
             if not tag: tag = ''
@@ -1612,7 +1735,7 @@ class MetObs(object):
             ptools.set_hexbin('hour',axhash['hour'], ymax, tag=tag)
             plt.tight_layout() 
             plt.show() 
-            yield site
+            #yield site
             #if save:
             #    tag = self.tag
             #    if not tag: tag = ''

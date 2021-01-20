@@ -3,22 +3,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns        
  
-def plot_freq(obs,prob):
-    sns.set()
-    sns.set_style('whitegrid')
+def plot_freq(obs,prob,name='freq', thresh=2.5):
+    #plt.figure(figsize=(5,20))
+    fs=20
+    figsize=(20,3)
+    fig = plt.figure(10,figsize=figsize)
+    sns.set_style('whitegrid', {"fontsize":fs})
     obscolor = '-k'
     probcolor = '-b'
-
-    fig = plt.figure(10)
     ax1 = fig.add_subplot(1,1,1)
     ax2 = ax1.twinx()
     ax2.plot(prob, probcolor  ,linewidth=2, alpha=0.7) 
     ax2.set_yticks([0,0.2,0.4,0.6,0.8,1.0])
     #ax2.set_yticklabels(['0','1','2','3','4','5'])
-    ax2.tick_params(axis='y', which='major', labelsize=20)
+    ax2.tick_params(axis='y', which='major', labelsize=fs,colors='blue')
+    ax1.tick_params(axis='y', which='major', labelsize=fs)
+    ax1.tick_params(axis='x', which='major', labelsize=fs)
     ax2.grid(b=None, which='major', axis='y')
+
+    ax1.set_ylabel('Measured \n Concentration \n (ppb)',fontsize=fs)
+    ax2.set_ylabel('Frequency > {}ppb'.format(2.5),color='blue',fontsize=fs)
  
     ax1.plot(obs, obscolor, label='obs')  
+    plt.savefig(name + '.png')
 
 
 def process_data(df, resample_time, resample_type):
@@ -36,8 +43,9 @@ def process_data(df, resample_time, resample_type):
 def make_talagrand(dflist,thresh,bnum,
                      resample_time=None,
                      resample_type='max',
-                     rname='talagrand'):
-    tal = Talagrand(thresh,bnum)
+                     rname='talagrand',
+                     verbose=False):
+    tal = Talagrand(thresh,bnum,verbose=verbose)
     for df in dflist:
         if resample_time:
            df = process_data(df,resample_time,resample_type)
@@ -62,7 +70,7 @@ def make_reliability(dflist,thresh,bnum,
 
         obs_col = [x for x in df.columns if 'obs' in x]
         obs_col = obs_col[0]
-        print(obs_col)
+        #print(obs_col)
         obsdf = df[obs_col]
         df2 = df.drop([obs_col],axis=1)
         # not sure why take the transpose?
@@ -72,7 +80,7 @@ def make_reliability(dflist,thresh,bnum,
          
         # gives percentage of simulations above threshold.
         prob = (df2[df2 > thresh].count())/num 
-        plot_freq(obsdf, prob)
+        plot_freq(obsdf, prob, name=obs_col+'_freq',thresh=thresh)
         plt.show()
 
         # add data to curve
@@ -103,7 +111,8 @@ class Talagrand:
     # ANSWER: create the bins first - one for each forecast.
     # 
 
-    def __init__(self, thresh,nbins):
+    def __init__(self, thresh,nbins,verbose=False):
+        self.verbose = verbose
         self.thresh = thresh
         self.ranklist = [] 
         self.obsvals = []
@@ -121,19 +130,42 @@ class Talagrand:
         # consider values with difference less than this the same.
         self.tolerance = 1e-2
 
-    def plotrank(self, fname=None):
+    def check1(self,fname=None,fs=10):
+        # creates scatter plot of observations whic
+        # were higher than all forecasts and the
+        # largest forecast
+        import matplotlib.colors
+        sns.set_style('whitegrid')
+        obs = []
+        maxf = []
+        for vals in self.nonzerorow:
+            obs.append(vals[-1])
+            maxf.append(np.max(vals[0:-1]))
+        yline = np.arange(0,int(np.max(maxf)),1)
+        xline = yline
+        norm = matplotlib.colors.LogNorm(vmin=0.1,vmax=None,clip=False)
+        cb = plt.hist2d(obs,maxf,bins=(50,50),density=False,cmap=plt.cm.BuPu,norm=norm)
+        plt.plot(xline,yline,'-k')
+        plt.colorbar()
+        ax = plt.gca()
+        ax.set_xlabel('Measured Value (ppb)',fontsize=fs)
+        ax.set_ylabel('Highest forecast(ppb)',fontsize=fs)
+        if fname: plt.savefig(fname + '.png')
+        #plt.plot(obs,maxf,'k.',markersize=5)
+        #plt.show()
+        return ax
+
+    def plotrank(self, fname=None,fs=10):
         sns.set_style('whitegrid')
         nbins = self.binra.shape[0] + 1
         xval = np.arange(1,nbins)
         plt.bar(xval,self.binra,alpha=0.5)
-        plt.xlabel('Rank')
-        plt.ylabel('Counts')
+        plt.xlabel('Rank',fontsize=fs)
+        plt.ylabel('Counts',fontsize=fs)
         plt.tight_layout() 
         if fname:
            plt.savefig('{}.png'.format(fname))
        
-        
-
     def plotrank_old(self,nbins):
         sns.set()
         plt.hist(self.ranklist,bins=nbins,histtype='bar',
@@ -143,6 +175,7 @@ class Talagrand:
         #         color='g',rwidth=0.9,density=True,align='mid')
 
     def add_data_temp(self,df):
+        # NOT WORKING.
         obs_col = [x for x in df.columns if 'obs' in x]
         obs_col = obs_col[0]
         # this keeps rows which have at least one value above threshold.
@@ -157,14 +190,23 @@ class Talagrand:
             temp.columns = ['iii','name','val']
             # gets index of the observation
             # add one since index starts at 0.
-            print(temp)
+            if self.verbose: print(temp)
              
             rank = float(temp[temp.name==obs_col].iii) 
             obsval = float(temp[temp.name==obs_col].val)
 
+    def sort_wind_direction(self,row):
+        # NOT WORKING YET.
+        # check for when distance between first and last
+        # value is greater than 360-R-1 + R0
+        # 0--------------------------------------------360
+        #     R0                             R-1
+        #
+        if (row[-1] - row[0]) > (360-row[-1] + row[0]):
+            return -1 
 
  
-    def add_data(self,df):
+    def add_data(self,df, wind_direction=False):
         # Assumes no duplicate values in forecast.
         # ToDO - should be able to apply to row so that the rank becomes
         # another column in the dataframe.
@@ -194,7 +236,7 @@ class Talagrand:
             # if multiple forecasts are within the tolerance then
             # point is split among them evenly.
             if len(temp[temp.zval <= self.tolerance]) > 1:
-                val2add = 1.0 / len(temp[temp.zval<=tolerance]) 
+                val2add = 1.0 / len(temp[temp.zval<=self.tolerance]) 
                 # indices of where forecasts match obs.
                 rankvals = np.where(temp.zval<=self.tolerance)
                 # add value to binra.
@@ -211,14 +253,15 @@ class Talagrand:
 
             # This is incorrect way. Making rank middle
             # of multiple 0 values. 
-            if obsval < zero:
-               rowz = row[row<zero]
-               rank = int(len(rowz)/2.0)
-               self.zeronum.append(len(rowz)-1)
-      
+            #if obsval < self.tolerance:
+            #   rowz = row[row<self.tolerance]
+            #   rank = int(len(rowz)/2.0)
+            #   self.zeronum.append(len(rowz)-1)
+     
+            # this is used in check1 method.
             if rank == len(self.binra)-1:
-               print('high val', row)
-               rowz = row[row>zero]
+               if self.verbose: print('high val', row)
+               rowz = row[row>self.tolerance]
                self.nonzero.append(len(rowz)-1)
                self.nonzerorow.append(row)
                self.obsmax.append(obsval)
@@ -289,13 +332,12 @@ class ReliabilityCurve:
             else:
                self.nohash[binval] += 1
 
-    def reliability_plot(self,rname='reliability'):
-        sns.set()
-        sns.set_style("whitegrid")
+
+    def get_binvals(self):
         xxx = [] # the bin values for x axis
         yyy = [] # total number abo
         nnn = [] # total number
-        yesval = []
+        yesval = [] 
         noval = []
         for binval in self.binlist:
             x = binval
@@ -314,21 +356,21 @@ class ReliabilityCurve:
                 xxx.append(x)
                 yyy.append(-0.1) 
                 nnn.append(0)
+        return xxx, yyy, nnn, yesval, noval
+
+    def reliability_plot(self,rname='reliability'):
+        xxx,yyy,nnn,yesval,noval = self.get_binvals()
+        sns.set()
+        sns.set_style("whitegrid")
         fig = plt.figure(1,figsize=(6,12))
 
         ax1 = fig.add_subplot(2,1,1)
         ax2 = fig.add_subplot(2,1,2)   
-        ax1.plot(xxx,yyy, '-g.')
-        ax1.plot([0,1], [0,1], '-k')
-        ax2.plot(xxx, nnn)
-        ax2.set_yscale('log')
-        ax2.set_xlabel('Fraction model runs')
-        ax1.set_ylabel('Fraction observations')
-        ax2.set_ylabel('Number of points')
+        sub_reliability_plot(self,ax1)
+        sub_reliability_number_plot(self,ax2)
        
         plt.tight_layout()
         plt.savefig('{}.png'.format(rname))
-
 
         fig2 = plt.figure(2)
         ax3 = fig2.add_subplot(1,1,1)
@@ -340,3 +382,43 @@ class ReliabilityCurve:
         plt.plot(xxx, yesval, '-g.',label='Obs above')
         plt.plot(xxx, noval, '-r.',label='Obs below')
         plt.show()
+
+
+def sub_reliability_number_plot(rc,ax, clr='-g.',fs=10,label=''):
+    xxx,yyy,nnn,yesval,noval = rc.get_binvals()
+    xx2 = []
+    nn2 = []
+    for xval in zip(xxx,nnn):
+        if xval[1] >=0: 
+           xx2.append(xval[0])
+           nn2.append(xval[1])             
+        
+    ax.plot(xx2, nn2, clr,label=label)
+    ax.set_yscale('log')
+    ax.set_xlabel('Fraction model runs',fontsize=fs)
+    ax.set_ylabel('Number of points',fontsize=fs)
+    ax.tick_params(labelsize=fs)
+    #ax.set_yticks([1,10,100,1000])
+    #ax.set_yticklabels([1,10,100,1000,10000])
+    return ax
+
+def sub_reliability_plot(rc,ax, clr='-g.',fs=10,label=''):
+    xxx,yyy,nnn,yesval,noval = rc.get_binvals()
+    xx2 = []
+    yy2 = []
+    for xval in zip(xxx,yyy):
+        if xval[1] >=0: 
+           xx2.append(xval[0])
+           yy2.append(xval[1])             
+    ax.plot(xx2,yy2, clr,label=label)
+    ax.plot([0,1], [0,1], '-k')
+    yes_sum = np.array(yesval).sum()
+    no_sum = np.array(noval).sum()
+    climate = yes_sum / (yes_sum + no_sum)
+    print(climate)
+    ax.set_ylabel('Fraction observations',fontsize=fs)
+    clr2 = clr.replace('-','--')[0:-1]
+    print(clr2)
+    ax.plot([0,1],[climate,climate], clr2 )
+    ax.tick_params(labelsize=fs)
+    return ax

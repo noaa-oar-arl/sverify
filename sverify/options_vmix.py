@@ -54,7 +54,6 @@ def get_obs_vmet(options, d1, d2, area, source_chunks,
 def get_vmet(options, d1, d2, area, source_chunks,
                       logfile):
    from sverify.nei import NeiSummary
-   print('GET VMET')
    # get vmixing data.
    df = read_vmix(options.vdir, d1, d2, source_chunks, sid=None)
    #vmet = vmixing2metobs(df,obs.obs)
