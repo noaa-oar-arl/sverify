@@ -50,7 +50,6 @@ def obs_pivot(df):
     wpivot = pd.pivot_table(df,
         values=['obs'], index=['time', 'siteid', 'latitude','longitude'],
         columns=['variable','units']).reset_index()
-
     return wpivot
 
 def rename_columns(df=pd.DataFrame()):
@@ -459,14 +458,15 @@ class SObs(object):
         if test:
            runtest
         elif self.pload:
-            self.obs = read_csv(tdir + self.csvfile, hdrs=[0])
+            self.obs = read_csv(os.path.join(tdir,self.csvfile), hdrs=[0])
             logger.info("Loaded csv file file " + tdir + self.csvfile)
             mload = True
             try:
-                met_obs = read_csv(tdir + "met" + self.csvfile, hdrs=[0, 1])
+                met_obs = read_csv(os.path.join(tdir, "met" + self.csvfile), hdrs=[0, 1])
             except BaseException:
                 mload = False
                 logger.info("did not load metobs from file")
+        if mload: logger.info("loaded csv file metobs")
         elif not self.pload:
             logger.info("LOADING from EPA site. Please wait\n")
             if getairnow:
@@ -484,7 +484,8 @@ class SObs(object):
             # aq.add_data([self.d1, self.d2], param=['SO2','WIND','TEMP'], download=False)
             #self.obs = aq.df.copy()
         #logger.debug("HEADERS in OBS: ", self.obs.columns.values)
-        if self.obs.empty: print('Obs empty ')
+        if self.obs.empty: 
+           logger.warning('Obs empty')
         # filter by area.
         if area:
             self.obs = obs_util.latlonfilter(
@@ -494,10 +495,14 @@ class SObs(object):
         # filter by time
         rt = datetime.timedelta(hours=72)
         self.obs = obs_util.timefilter(self.obs, [self.d1, self.d2 + rt])
-        
-
         if self.obs.empty: 
            logger.warning('Obs empty after time filter')
+           logger.warning(self.d1.strftime("%Y %m %d"))
+           logger.warning((self.d2+rt).strftime("%Y %m %d"))
+        else:
+           logger.warning('obs loaded successfully')
+           logger.warning(self.d1.strftime("%Y %m %d"))
+           logger.warning((self.d2+rt).strftime("%Y %m %d"))
 
         # if the data was not loaded from a file then save all the data here.
         if not self.pload:
@@ -553,6 +558,11 @@ class SObs(object):
             d3 = d1 + datetime.timedelta(hours=oe - 1)
             odir = date2dir(tdir, d1, dhour=oc, chkdir=True)
             dname = odir + "datem.txt"
+            logger.info('writing to '+ dname)
+            logger.info(d1.strftime("%Y-%m-%d"))
+            logger.info(d3.strftime("%Y-%m-%d"))
+            logger.info(d2.strftime("%Y-%m-%d"))
+            logger.info('-----------------------')
             datem.write_datem(
                 self.obs, sitename="siteid", drange=[d1, d3], dname=dname,
                 fillhours=1, verbose=False
