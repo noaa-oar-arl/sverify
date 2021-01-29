@@ -32,6 +32,9 @@ from utilhysplit import emitimes
 logger = logging.getLogger(__name__)
 # from monet.obs.epa_util import convert_epa_unit
 
+
+#2021 Jan 29 (amc) added make_csv method to SEmissions class.
+
 """
 SEmissions class
 
@@ -173,7 +176,7 @@ class CEMScsv:
         if not cname: cname = self.cname
         dtp = {self.timecol: 'datetime64[ns]'}
         if os.path.isfile(self.tdir + cname):
-            cems = pd.read_csv(cname, sep=",", header=[0,1,2], dtype=dtp
+            cems = pd.read_csv(self.tdir + cname, sep=",", header=[0,1,2], dtype=dtp
                               ) 
             self.cems = cems
         #print('READ CEMS', self.tdir, cname, self.cems[0:10])
@@ -806,6 +809,10 @@ class SEmissions(object):
     def read_csv(self, name="cems.csv"):
         cems = pd.read_csv(name, sep=",")
         return cems
+
+    def write_csv(self,unit=False):
+        df = self.get_so2_sources(unit=unit)
+        self.make_csv(df.copy())
 
     def make_csv(self,df, cname="cems.csv"):
         if self.tag:

@@ -5,6 +5,10 @@ from sverify.svcems import SEmissions
 from sverify.ptools import create_map
 from sverify.svens import ensemble_emitimes
 
+#changes
+#2021 Jan 29 (amc) write csv file for cems even if emit-times files not created.
+
+
 #def emit_ens(options, tdir):
 #
 #    ef.create_emitimes(
@@ -81,6 +85,8 @@ def options_cems_main(options, d1, d2, area, source_chunks,
         )
         #return ef, rfignum
     # create plots of emissions
+    else:
+       ef.write_csv(unit=False)
     if create_plots:
        make_plots(options,ef,rfignum)
     return ef, rfignum
