@@ -454,7 +454,7 @@ class SObs(object):
         test      : boolean
         """
         area = self.area
-   
+        mload = False
         if test:
            runtest
         elif self.pload:
@@ -464,7 +464,6 @@ class SObs(object):
             try:
                 met_obs = read_csv(os.path.join(tdir, "met" + self.csvfile), hdrs=[0, 1])
             except BaseException:
-                mload = False
                 logger.info("did not load metobs from file")
         if mload: logger.info("loaded csv file metobs")
         elif not self.pload:
