@@ -804,7 +804,6 @@ class SEmissions(object):
         # print("SOURCES ", sources.columns)
         return sources
 
-    # def create_heatfile(self,edate, schunks=1000, tdir='./', unit=True):
 
     def read_csv(self, name="cems.csv"):
         cems = pd.read_csv(name, sep=",")
@@ -962,8 +961,9 @@ class SEmissions(object):
                     key = str(oris) + str(mid)
                 else:
                     key = oris
-                ehash[key] = emitimes.EmiTimes(filename=ename)
-                ehash[key].set_species(sphash)
+                ehash[key] = emitimes.EmiTimes(filename=ename,species=sphash)
+                # TODO need to check this update. sphash now set in __init__.
+                #ehash[key].set_species(sphash)
 
         # now this loop fills the EmitTimes objects
         for hdr in locs:
